@@ -416,6 +416,51 @@
             color: var(--accent);
         }
 
+        .song-item.loading {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        .song-item.loading .song-title::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .control-btn.disabled {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .song-item .warning-icon {
+            display: none;
+            color: #f39c12;
+            cursor: pointer;
+            padding: 4px;
+            margin-left: auto;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+
+        .song-item .warning-icon:hover {
+            transform: scale(1.2);
+        }
+
+        .song-item .warning-icon.visible {
+            display: flex;
+            align-items: center;
+        }
+
+        .song-item .warning-icon.retrying {
+            animation: spin 1s linear infinite;
+            color: var(--accent);
+        }
+
         .song-number {
             width: 24px;
             text-align: center;
@@ -1100,6 +1145,45 @@
         const RECENT_PLAYLISTS_KEY = 'sunoRecentPlaylists';
         const MAX_RECENT_PLAYLISTS = 6;
 
+        // Song metadata cache
+        const SONG_CACHE_KEY = 'sunoSongCache';
+        const CACHE_TTL_DAYS = 7;
+
+        // Get cached song metadata
+        function getCachedSongMetadata(uuid) {
+            try {
+                const cache = JSON.parse(localStorage.getItem(SONG_CACHE_KEY) || '{}');
+                const cached = cache[uuid];
+                if (cached) {
+                    // Check if expired
+                    const ageMs = Date.now() - (cached.timestamp || 0);
+                    const maxAgeMs = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
+                    if (ageMs < maxAgeMs) {
+                        return cached;
+                    }
+                }
+            } catch (e) {
+                console.log('Cache read error:', e);
+            }
+            return null;
+        }
+
+        // Save song metadata to cache
+        function cacheSongMetadata(uuid, data) {
+            try {
+                const cache = JSON.parse(localStorage.getItem(SONG_CACHE_KEY) || '{}');
+                cache[uuid] = {
+                    title: data.title,
+                    artist: data.artist,
+                    coverUrl: data.coverUrl,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(SONG_CACHE_KEY, JSON.stringify(cache));
+            } catch (e) {
+                console.log('Cache write error:', e);
+            }
+        }
+
         // Check for URL parameter and show recent playlists
         window.onload = function() {
             const params = new URLSearchParams(window.location.search);
@@ -1249,9 +1333,13 @@
                 return;
             }
 
-            // Show loading
+            // Show loading (reset any previous fade-out state)
             document.getElementById('inputScreen').style.display = 'none';
-            document.getElementById('loadingScreen').style.display = 'flex';
+            const loadingScreen = document.getElementById('loadingScreen');
+            loadingScreen.classList.remove('fade-out');
+            loadingScreen.style.display = 'flex';
+            document.getElementById('songsFoundList').style.display = 'none';
+            document.getElementById('songsFoundList').innerHTML = '';
 
             try {
                 // Fetch playlist from server
@@ -1265,15 +1353,22 @@
                 // Update loading status
                 document.getElementById('loadingStatus').textContent = `Found ${data.songs.length} songs. Loading metadata...`;
 
-                // Build playlist with data from server
-                playlist = data.songs.map((song, i) => ({
-                    uuid: song.uuid,
-                    title: song.title || `Track ${i + 1}`,
-                    artist: song.artist || 'Suno AI',
-                    audioUrl: `https://cdn1.suno.ai/${song.uuid}.mp3`,
-                    coverUrl: null,
-                    duration: 0
-                }));
+                // Build playlist with data from server, checking cache first
+                playlist = data.songs.map((song, i) => {
+                    const cached = getCachedSongMetadata(song.uuid);
+                    const hasCachedData = cached && cached.artist && cached.artist !== 'Suno AI';
+
+                    return {
+                        uuid: song.uuid,
+                        title: cached?.title || song.title || `Track ${i + 1}`,
+                        artist: cached?.artist || song.artist || 'Suno AI',
+                        audioUrl: `https://cdn1.suno.ai/${song.uuid}.m4a`,
+                        coverUrl: cached?.coverUrl || null,
+                        duration: 0,
+                        metadataLoaded: hasCachedData,
+                        fetchFailed: false
+                    };
+                });
 
                 // Show songs being discovered in loading screen
                 showDiscoveredSongs(playlist);
@@ -1282,8 +1377,59 @@
                 document.getElementById('playlistTitle').textContent = data.playlistTitle || 'Playlist';
                 document.getElementById('playlistCount').textContent = `${playlist.length} songs`;
 
-                // Fetch metadata for each song (in parallel, batched)
-                await fetchAllSongMetadata();
+                // Fetch first 3 songs one at a time before starting playback
+                // Each song gets its own timeout so we properly wait for each
+                const firstBatchSize = Math.min(3, playlist.length);
+
+                for (let i = 0; i < firstBatchSize; i++) {
+                    const song = playlist[i];
+
+                    // Skip if already loaded from cache
+                    if (song.metadataLoaded && !song.fetchFailed) {
+                        document.getElementById('loadingStatus').textContent = `Loading first songs (${i + 1}/${firstBatchSize}) - cached`;
+                        continue;
+                    }
+
+                    document.getElementById('loadingStatus').textContent = `Loading first songs (${i + 1}/${firstBatchSize})...`;
+
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s per song
+
+                    try {
+                        const response = await fetch('/api/fetch-songs-batch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ uuids: [song.uuid] }),
+                            signal: controller.signal
+                        });
+
+                        clearTimeout(timeoutId);
+
+                        if (response.ok) {
+                            const results = await response.json();
+                            const info = results[song.uuid];
+                            if (info) {
+                                if (info.title && info.title.length > 0) song.title = info.title;
+                                if (info.artist && info.artist.length > 0) song.artist = info.artist;
+                                if (info.coverUrl) song.coverUrl = info.coverUrl;
+
+                                // Cache successful fetch
+                                if (song.artist !== 'Suno AI') {
+                                    cacheSongMetadata(song.uuid, song);
+                                }
+                            }
+                            song.fetchFailed = (song.artist === 'Suno AI');
+                        } else {
+                            song.fetchFailed = true;
+                        }
+                    } catch (e) {
+                        clearTimeout(timeoutId);
+                        console.log(`First batch song ${i} fetch failed:`, e.name === 'AbortError' ? 'Timeout' : e);
+                        song.fetchFailed = true;
+                    }
+
+                    song.metadataLoaded = true;
+                }
 
                 // Save to recent playlists
                 saveToRecentPlaylists({
@@ -1295,8 +1441,14 @@
                     timestamp: Date.now()
                 });
 
-                // Initialize player
+                // Initialize player - first songs are ready
                 initializePlayer();
+
+                // Fetch remaining songs 1-by-1 in background (fast HTTP - titles/covers)
+                fetchRemainingMetadataInBackground(firstBatchSize);
+
+                // Fetch real artist names via Puppeteer in background (slower but accurate)
+                fetchArtistsInBackground();
 
             } catch (error) {
                 console.error('Error:', error);
@@ -1306,42 +1458,283 @@
             }
         }
 
-        // Fetch metadata for all songs using batch endpoint
-        async function fetchAllSongMetadata() {
-            document.getElementById('loadingStatus').textContent = 'Loading song details...';
+        // Fetch real artist names via Puppeteer in background (streaming)
+        function fetchArtistsInBackground() {
+            // Find songs that still have "Suno AI" as artist
+            const songsNeedingArtist = playlist
+                .map((song, index) => ({ uuid: song.uuid, index }))
+                .filter((_, i) => playlist[i].artist === 'Suno AI');
+
+            if (songsNeedingArtist.length === 0) {
+                console.log('All songs already have artist names');
+                return;
+            }
+
+            // Build UUID to index map
+            const uuidToIndex = {};
+            for (const { uuid, index } of songsNeedingArtist) {
+                uuidToIndex[uuid] = index;
+            }
+
+            console.log(`Fetching artist names for ${songsNeedingArtist.length} songs via Puppeteer...`);
+
+            // Use Server-Sent Events for streaming updates
+            const uuids = songsNeedingArtist.map(s => s.uuid).join(',');
+            const eventSource = new EventSource(`/api/fetch-artists-stream?uuids=${encodeURIComponent(uuids)}`);
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.done) {
+                        console.log('Artist streaming complete');
+                        eventSource.close();
+                        return;
+                    }
+
+                    if (data.error) {
+                        console.log('Artist stream error:', data.error);
+                        eventSource.close();
+                        return;
+                    }
+
+                    const { uuid, artist } = data;
+                    const index = uuidToIndex[uuid];
+
+                    if (index !== undefined && artist && artist !== 'Suno AI') {
+                        playlist[index].artist = artist;
+                        playlist[index].fetchFailed = false;
+
+                        // Update cache
+                        cacheSongMetadata(uuid, playlist[index]);
+
+                        // Update UI immediately
+                        updateSongListItem(index, playlist[index]);
+
+                        // Update now playing if this is the current song
+                        if (index === currentIndex) {
+                            updateNowPlayingInfo(playlist[index]);
+                        }
+
+                        console.log(`Updated artist for "${playlist[index].title}": ${artist}`);
+                    }
+                } catch (e) {
+                    console.log('Error parsing artist stream:', e);
+                }
+            };
+
+            eventSource.onerror = (e) => {
+                console.log('Artist stream connection closed');
+                eventSource.close();
+            };
+        }
+
+        // Fetch remaining metadata 1-by-1 in background after player starts
+        async function fetchRemainingMetadataInBackground(startIndex) {
+            for (let i = startIndex; i < playlist.length; i++) {
+                const song = playlist[i];
+
+                // Skip if already loaded from cache
+                if (song.metadataLoaded && !song.fetchFailed) {
+                    updateSongListItem(i, song);
+                    continue;
+                }
+
+                await fetchSongMetadata(i);
+
+                // Check if all songs are now loaded - enable shuffle
+                if (playlist.every(s => s.metadataLoaded)) {
+                    document.getElementById('shuffleBtn').classList.remove('disabled');
+                }
+            }
+        }
+
+        // Fetch metadata for a single song with timeout
+        async function fetchSongMetadata(index) {
+            const song = playlist[index];
+            let fetchFailed = false;
+
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
             try {
-                // Use batch endpoint for much faster fetching
-                const uuids = playlist.map(song => song.uuid);
                 const response = await fetch('/api/fetch-songs-batch', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ uuids })
+                    body: JSON.stringify({ uuids: [song.uuid] }),
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
 
                 if (response.ok) {
                     const results = await response.json();
+                    const info = results[song.uuid];
 
-                    // Update playlist with fetched data
-                    playlist.forEach((song, index) => {
-                        const info = results[song.uuid];
-                        if (info) {
-                            if (info.title && info.title.length > 0) song.title = info.title;
-                            if (info.artist && info.artist.length > 0) song.artist = info.artist;
-                            if (info.coverUrl) song.coverUrl = info.coverUrl;
+                    if (info) {
+                        if (info.title && info.title.length > 0) song.title = info.title;
+                        if (info.artist && info.artist.length > 0) song.artist = info.artist;
+                        if (info.coverUrl) song.coverUrl = info.coverUrl;
+                    }
 
-                            // Update loading screen
-                            updateLoadingListItem(index, song.title);
-                        }
-                    });
+                    // Consider it failed if we still have default artist
+                    if (song.artist === 'Suno AI') {
+                        fetchFailed = true;
+                    } else {
+                        // Cache successful fetch
+                        cacheSongMetadata(song.uuid, song);
+                    }
+                } else {
+                    fetchFailed = true;
                 }
             } catch (e) {
-                console.log('Batch fetch failed, trying covers only:', e);
+                clearTimeout(timeoutId);
+                console.log(`Metadata fetch failed for song ${index}:`, e.name === 'AbortError' ? 'Timeout' : e);
+                fetchFailed = true;
             }
 
-            // For any songs still missing covers, try direct URL
-            document.getElementById('loadingStatus').textContent = 'Loading album art...';
-            await Promise.all(playlist.map(song => tryLoadCover(song)));
+            // Mark as loaded and track failure state
+            song.metadataLoaded = true;
+            song.fetchFailed = fetchFailed;
+            updateSongListItem(index, song);
+
+            // Update now playing if this is the current song
+            if (index === currentIndex) {
+                updateNowPlayingInfo(song);
+            }
+        }
+
+        // Retry fetching only missing metadata for a song
+        async function retrySongMetadata(index) {
+            const song = playlist[index];
+            const songItem = document.querySelector(`.song-item[data-index="${index}"]`);
+            const warningIcon = songItem?.querySelector('.warning-icon');
+
+            // Check what we're missing
+            const needsArtist = !song.artist || song.artist === 'Suno AI';
+            const needsCover = !song.coverUrl;
+
+            // If we have everything, just clear the warning
+            if (!needsArtist && !needsCover) {
+                song.fetchFailed = false;
+                updateSongListItem(index, song);
+                return;
+            }
+
+            if (warningIcon) {
+                warningIcon.classList.add('retrying');
+            }
+
+            // Save existing data we want to keep
+            const existingCover = song.coverUrl;
+            const existingTitle = song.title;
+            const existingArtist = song.artist !== 'Suno AI' ? song.artist : null;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+            try {
+                const response = await fetch('/api/fetch-songs-batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uuids: [song.uuid] }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const results = await response.json();
+                    const info = results[song.uuid];
+
+                    if (info) {
+                        // Only update what we're missing
+                        if (info.title && info.title.length > 0 && !existingTitle) {
+                            song.title = info.title;
+                        }
+                        if (info.artist && info.artist.length > 0 && needsArtist) {
+                            song.artist = info.artist;
+                        }
+                        if (info.coverUrl && needsCover) {
+                            song.coverUrl = info.coverUrl;
+                        }
+                    }
+
+                    // Check if we now have what we need
+                    if (song.artist !== 'Suno AI') {
+                        song.fetchFailed = false;
+                        // Cache successful retry
+                        cacheSongMetadata(song.uuid, song);
+                    } else {
+                        song.fetchFailed = true;
+                    }
+                } else {
+                    song.fetchFailed = true;
+                }
+            } catch (e) {
+                clearTimeout(timeoutId);
+                console.log(`Retry failed for song ${index}:`, e.name === 'AbortError' ? 'Timeout' : e);
+                song.fetchFailed = true;
+            }
+
+            if (warningIcon) {
+                warningIcon.classList.remove('retrying');
+            }
+
+            updateSongListItem(index, song);
+
+            // Update now playing if this is the current song
+            if (index === currentIndex) {
+                updateNowPlayingInfo(song);
+            }
+        }
+
+        // Update a single song item in the sidebar list
+        function updateSongListItem(index, song) {
+            const songItem = document.querySelector(`.song-item[data-index="${index}"]`);
+            if (!songItem) return;
+
+            // Remove loading state
+            songItem.classList.remove('loading');
+
+            const titleEl = songItem.querySelector('.song-title');
+            const artistEl = songItem.querySelector('.song-duration');
+            const thumbEl = songItem.querySelector('.song-thumb');
+            const warningIcon = songItem.querySelector('.warning-icon');
+
+            if (titleEl) titleEl.textContent = song.title;
+            if (artistEl) artistEl.textContent = song.artist;
+            if (thumbEl && song.coverUrl) {
+                thumbEl.innerHTML = `<img src="${song.coverUrl}" alt="">`;
+            }
+
+            // Show/hide warning icon based on fetch status
+            if (warningIcon) {
+                warningIcon.classList.toggle('visible', song.fetchFailed === true);
+            }
+        }
+
+        // Update now playing info without full transition
+        function updateNowPlayingInfo(song) {
+            document.getElementById('nowPlayingTitle').textContent = song.title;
+            document.getElementById('nowPlayingArtist').textContent = song.artist;
+            document.getElementById('miniTitle').textContent = song.title;
+            document.getElementById('miniArtist').textContent = song.artist;
+            document.title = `${song.title} - Suno Playlist Player`;
+
+            // Update cover art if available
+            if (song.coverUrl) {
+                const artEl = document.getElementById('nowPlayingArt');
+                const bgEl = document.getElementById('mainContentBg');
+                const miniImg = document.getElementById('miniThumbImg');
+
+                artEl.innerHTML = `<img src="${song.coverUrl}" alt="">`;
+                bgEl.style.backgroundImage = `url(${song.coverUrl})`;
+                bgEl.classList.add('visible');
+                miniImg.src = song.coverUrl;
+                miniImg.style.display = 'block';
+            }
         }
 
         // Try to load cover image if missing
@@ -1415,7 +1808,7 @@
             // Build song list with staggered animation
             const songList = document.getElementById('songList');
             songList.innerHTML = playlist.map((song, i) => `
-                <div class="song-item" data-index="${i}" onclick="playSong(${i})" style="animation-delay: ${0.6 + i * 0.05}s">
+                <div class="song-item ${song.metadataLoaded ? '' : 'loading'}" data-index="${i}" onclick="playSong(${i})" style="animation-delay: ${0.6 + i * 0.05}s">
                     <div class="song-number"><span>${i + 1}</span></div>
                     <div class="song-thumb">
                         ${song.coverUrl ? `<img src="${song.coverUrl}" alt="">` : '♫'}
@@ -1424,8 +1817,15 @@
                         <div class="song-title">${escapeHtml(song.title)}</div>
                         <div class="song-duration">${song.artist}</div>
                     </div>
+                    <div class="warning-icon" onclick="event.stopPropagation(); retrySongMetadata(${i})" title="Couldn't load all details. Click to retry.">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                    </div>
                 </div>
             `).join('');
+
+            // Disable shuffle until all songs are loaded
+            const allLoaded = playlist.every(s => s.metadataLoaded);
+            document.getElementById('shuffleBtn').classList.toggle('disabled', !allLoaded);
 
             // Initialize shuffle order
             resetShuffleOrder();
@@ -1453,6 +1853,10 @@
             // Set repeat button to show "Repeat All" state (default)
             document.getElementById('repeatBtn').style.color = 'var(--accent)';
             document.getElementById('repeatBtn').title = 'Repeat: All';
+
+            // Sync crossfade state from slider (preserves value when loading new playlist)
+            crossfadeDuration = parseFloat(document.getElementById('crossfadeSlider').value);
+            document.getElementById('crossfadeValue').textContent = crossfadeDuration + 's';
 
             // Auto-play first song
             playSong(0);
@@ -1915,6 +2319,9 @@
 
         // Toggle shuffle
         function toggleShuffle() {
+            // Don't toggle if still loading
+            if (document.getElementById('shuffleBtn').classList.contains('disabled')) return;
+
             isShuffle = !isShuffle;
             document.getElementById('shuffleBtn').style.color = isShuffle ? 'var(--accent)' : 'var(--text-primary)';
             if (isShuffle) {

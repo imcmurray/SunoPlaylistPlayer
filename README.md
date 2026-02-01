@@ -7,6 +7,7 @@ A beautiful web-based playlist player for [Suno AI](https://suno.com) music with
 ## Features
 
 - **Playlist Loading** - Just paste a Suno playlist URL and play
+- **Real-time Artist Names** - Artist names load in the background via Puppeteer and update the UI as they're found
 - **Beautiful UI** - Dark theme with blurred album art backgrounds
 - **Crossfade Transitions** - Smooth audio crossfading (0-10 seconds)
 - **Visual Transitions** - 5 transition styles + random mode:
@@ -65,8 +66,10 @@ The server uses [Puppeteer](https://pptr.dev/) to fetch playlist data from Suno:
 
 1. When you submit a playlist URL, the server launches a headless browser
 2. It navigates to the Suno playlist page and extracts song UUIDs
-3. Song metadata (titles, artists, covers) is fetched in batch
-4. The player streams audio directly from Suno's CDN
+3. Song metadata (titles, covers) is fetched quickly via HTTP
+4. The player starts immediately while artist names load in the background
+5. Real artist names are fetched via Puppeteer and streamed to the UI in real-time
+6. The player streams audio directly from Suno's CDN
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -120,6 +123,7 @@ suno-playlist-player/
 | `/api/fetch-playlist?url=` | GET | Fetch playlist songs |
 | `/api/fetch-songs-batch` | POST | Batch fetch song metadata |
 | `/api/fetch-song-info?uuid=` | GET | Fetch single song info |
+| `/api/fetch-artists-stream?uuids=` | GET | Stream artist names via SSE (Puppeteer) |
 
 ## Tech Stack
 

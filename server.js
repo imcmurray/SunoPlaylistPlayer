@@ -134,184 +134,201 @@ async function fetchPlaylistSongs(playlistUrl) {
     }
 }
 
-// Fetch individual song info
+// Fetch individual song info using direct HTTP (much faster than Puppeteer)
 async function fetchSongInfo(uuid) {
-    let browser;
     try {
-        browser = await puppeteer.launch(getPuppeteerOptions());
-
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
-        // Use faster loading strategy - just wait for DOM, not all network requests
-        await page.goto(`https://suno.com/song/${uuid}`, { waitUntil: 'domcontentloaded', timeout: 10000 });
-        await sleep(1000);
-
-        const songInfo = await page.evaluate(() => {
-            // Try to get title from various sources
-            let title = '';
-
-            // Try og:title first (usually most reliable)
-            const ogTitle = document.querySelector('meta[property="og:title"]');
-            if (ogTitle && ogTitle.content) {
-                title = ogTitle.content.trim();
-                // Remove " | Suno" suffix if present
-                title = title.replace(/\s*\|\s*Suno$/i, '').trim();
-            }
-
-            // Try h1 as fallback
-            if (!title) {
-                const h1 = document.querySelector('h1');
-                if (h1) title = h1.textContent.trim();
-            }
-
-            // Try document title as last resort
-            if (!title && document.title) {
-                title = document.title.replace(/\s*[-|]?\s*Suno.*$/i, '').trim();
-            }
-
-            // Get og:image for cover
-            const ogImage = document.querySelector('meta[property="og:image"]');
-            const coverUrl = ogImage ? ogImage.content : null;
-
-            // Try to find artist/creator from multiple sources
-            let artist = '';
-
-            // Method 1: Look for profile links with /@username pattern
-            const profileLinks = document.querySelectorAll('a[href*="/@"]');
-            for (const link of profileLinks) {
-                const href = link.getAttribute('href');
-                const match = href.match(/\/@([^\/\?]+)/);
-                if (match) {
-                    artist = match[1];
-                    break;
-                }
-            }
-
-            // Method 2: Check og:description for "by @username" pattern
-            if (!artist) {
-                const ogDesc = document.querySelector('meta[property="og:description"]');
-                if (ogDesc && ogDesc.content) {
-                    const byMatch = ogDesc.content.match(/by\s+@?(\w+)/i);
-                    if (byMatch) artist = byMatch[1];
-                }
-            }
-
-            // Method 3: Look for any element containing @ followed by username
-            if (!artist) {
-                const textContent = document.body.innerText;
-                const atMatch = textContent.match(/@(\w{3,20})/);
-                if (atMatch) artist = atMatch[1];
-            }
-
-            // Method 4: Look for creator/artist class elements
-            if (!artist) {
-                const creatorEl = document.querySelector('[class*="creator"], [class*="artist"], [class*="author"], [class*="user"]');
-                if (creatorEl) {
-                    artist = creatorEl.textContent.trim().replace(/^@/, '');
-                }
-            }
-
-            if (!artist) artist = 'Suno AI';
-
-            return { title, artist, coverUrl };
+        const response = await fetch(`https://suno.com/song/${uuid}`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            },
+            signal: AbortSignal.timeout(8000) // 8 second timeout
         });
 
-        return songInfo;
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const html = await response.text();
+
+        // Check for __NEXT_DATA__ which contains server-rendered data
+        const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
+        if (nextDataMatch) {
+            try {
+                const nextData = JSON.parse(nextDataMatch[1]);
+                const pageProps = nextData.props?.pageProps || {};
+                console.log(`[${uuid}] __NEXT_DATA__ pageProps keys:`, Object.keys(pageProps));
+
+                // Log the clip/song data if available
+                const clip = pageProps.clip;
+                if (clip) {
+                    console.log(`[${uuid}] Clip found:`, {
+                        title: clip.title,
+                        display_name: clip.display_name,
+                        handle: clip.handle,
+                        user_display_name: clip.user_display_name,
+                        created_by: clip.created_by
+                    });
+                } else {
+                    console.log(`[${uuid}] No clip in pageProps. Available:`, Object.keys(pageProps).join(', ') || '(empty)');
+                    // Log first level of any object that might contain song data
+                    for (const key of Object.keys(pageProps)) {
+                        const val = pageProps[key];
+                        if (val && typeof val === 'object') {
+                            console.log(`[${uuid}]   ${key} keys:`, Object.keys(val).slice(0, 10).join(', '));
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log(`[${uuid}] Could not parse __NEXT_DATA__:`, e.message);
+            }
+        } else {
+            console.log(`[${uuid}] No __NEXT_DATA__ found in HTML (length: ${html.length})`);
+        }
+
+        // Parse og:title
+        let title = '';
+        const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
+        if (ogTitleMatch) {
+            title = ogTitleMatch[1].replace(/\s*\|\s*Suno$/i, '').trim();
+        }
+        console.log(`[${uuid}] og:title = "${title || '(not found)'}"`);
+
+        // Parse og:image
+        let coverUrl = null;
+        const ogImageMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+        if (ogImageMatch) {
+            coverUrl = ogImageMatch[1];
+        }
+
+        // Parse og:description for artist (handle different attribute orders)
+        let artist = '';
+
+        // Try property then content
+        let ogDescMatch = html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i);
+        // Try content then property
+        if (!ogDescMatch) {
+            ogDescMatch = html.match(/<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:description["']/i);
+        }
+
+        console.log(`[${uuid}] og:description = "${ogDescMatch ? ogDescMatch[1] : '(not found)'}"`);
+
+        if (ogDescMatch) {
+            // Look for "by @username" or "by username" pattern
+            const byMatch = ogDescMatch[1].match(/by\s+@?(\w+)/i);
+            if (byMatch) artist = byMatch[1];
+        }
+
+        // Fallback: look for /@username links in the HTML
+        if (!artist) {
+            const atMatch = html.match(/href=["']?\/@([a-zA-Z0-9_]+)["']?/i);
+            if (atMatch) artist = atMatch[1];
+        }
+
+        // Fallback: look for "by @username" anywhere in HTML
+        if (!artist) {
+            const byAnyMatch = html.match(/by\s+@([a-zA-Z0-9_]+)/i);
+            if (byAnyMatch) artist = byAnyMatch[1];
+        }
+
+        // Fallback: look for twitter:creator meta tag
+        if (!artist) {
+            const twitterMatch = html.match(/<meta[^>]*name=["']twitter:creator["'][^>]*content=["']@?([^"']+)["']/i);
+            if (twitterMatch) artist = twitterMatch[1];
+        }
+
+        if (!artist) artist = 'Suno AI';
+
+        console.log(`[${uuid}] Final result: title="${title}", artist="${artist}"`);
+        return { title, artist, coverUrl };
     } catch (e) {
-        // Don't log timeout errors as they're expected sometimes
         if (!e.message.includes('timeout')) {
             console.error('Error fetching song info:', e.message);
         }
-        // Return partial data with cover URL guess
         return {
             title: '',
             artist: '',
             coverUrl: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`
         };
-    } finally {
-        if (browser) await browser.close();
     }
 }
 
-// Fetch multiple songs with a single browser instance
-async function fetchSongInfoBatch(uuids) {
-    let browser;
+// Fetch artist names using Puppeteer (slower but accurate)
+async function fetchArtistsViaPuppeteer(uuids) {
     const results = {};
+    let browser;
 
     try {
         browser = await puppeteer.launch(getPuppeteerOptions());
+        console.log(`[Puppeteer] Browser launched, fetching ${uuids.length} artists...`);
 
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
+        // Process one at a time to avoid overwhelming
         for (const uuid of uuids) {
+            let page;
             try {
-                await page.goto(`https://suno.com/song/${uuid}`, { waitUntil: 'domcontentloaded', timeout: 8000 });
-                await sleep(800);
+                page = await browser.newPage();
+                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-                const songInfo = await page.evaluate(() => {
-                    let title = '';
-                    const ogTitle = document.querySelector('meta[property="og:title"]');
-                    if (ogTitle && ogTitle.content) {
-                        title = ogTitle.content.trim().replace(/\s*\|\s*Suno$/i, '').trim();
-                    }
-                    if (!title) {
-                        const h1 = document.querySelector('h1');
-                        if (h1) title = h1.textContent.trim();
-                    }
-
-                    const ogImage = document.querySelector('meta[property="og:image"]');
-                    const coverUrl = ogImage ? ogImage.content : null;
-
-                    let artist = '';
-                    const profileLinks = document.querySelectorAll('a[href*="/@"]');
-                    for (const link of profileLinks) {
-                        const href = link.getAttribute('href');
-                        const match = href.match(/\/@([^\/\?]+)/);
-                        if (match) {
-                            artist = match[1];
-                            break;
-                        }
-                    }
-                    if (!artist) {
-                        const ogDesc = document.querySelector('meta[property="og:description"]');
-                        if (ogDesc && ogDesc.content) {
-                            const byMatch = ogDesc.content.match(/by\s+@?(\w+)/i);
-                            if (byMatch) artist = byMatch[1];
-                        }
-                    }
-                    if (!artist) artist = 'Suno AI';
-
-                    return { title, artist, coverUrl };
+                await page.goto(`https://suno.com/song/${uuid}`, {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 30000
                 });
 
-                results[uuid] = songInfo;
+                // Wait for the artist link to appear (or timeout after 10s)
+                try {
+                    await page.waitForSelector('a[href^="/@"]', { timeout: 10000 });
+                } catch (e) {
+                    // Selector not found, continue anyway
+                }
+
+                // Extract artist from the page
+                const artist = await page.evaluate(() => {
+                    // Look for the artist link (/@username)
+                    const artistLink = document.querySelector('a[href^="/@"]');
+                    if (artistLink) {
+                        return artistLink.textContent.trim();
+                    }
+                    return null;
+                });
+
+                console.log(`[Puppeteer] ${uuid}: artist = "${artist || '(not found)'}"`);
+                results[uuid] = { artist: artist || 'Suno AI' };
+
             } catch (e) {
-                // Use fallback data for this song
-                results[uuid] = {
-                    title: '',
-                    artist: '',
-                    coverUrl: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`
-                };
+                console.log(`[Puppeteer] ${uuid}: error - ${e.message}`);
+                results[uuid] = { artist: 'Suno AI' };
+            } finally {
+                if (page) await page.close();
             }
         }
 
-        return results;
-    } catch (e) {
-        console.error('Batch fetch error:', e.message);
-        // Return fallback for all
-        for (const uuid of uuids) {
+    } finally {
+        if (browser) await browser.close();
+        console.log(`[Puppeteer] Browser closed, fetched ${Object.keys(results).length} artists`);
+    }
+
+    return results;
+}
+
+// Fetch multiple songs using direct HTTP (parallel for speed)
+async function fetchSongInfoBatch(uuids) {
+    const results = {};
+
+    // Fetch all songs in parallel for maximum speed
+    const fetchPromises = uuids.map(async (uuid) => {
+        try {
+            const info = await fetchSongInfo(uuid);
+            results[uuid] = info;
+        } catch (e) {
             results[uuid] = {
                 title: '',
                 artist: '',
                 coverUrl: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`
             };
         }
-        return results;
-    } finally {
-        if (browser) await browser.close();
-    }
+    });
+
+    await Promise.all(fetchPromises);
+    return results;
 }
 
 // HTTP Server
@@ -369,6 +386,86 @@ const server = http.createServer(async (req, res) => {
                 res.end(JSON.stringify({ error: error.message }));
             }
         });
+        return;
+    }
+
+    // API endpoint to fetch artist names via Puppeteer (SSE - streams results as found)
+    if (url.pathname === '/api/fetch-artists-stream' && req.method === 'GET') {
+        const uuidsParam = url.searchParams.get('uuids');
+        if (!uuidsParam) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Missing uuids parameter' }));
+            return;
+        }
+
+        const uuids = uuidsParam.split(',');
+        console.log(`Streaming artists for ${uuids.length} songs via Puppeteer...`);
+
+        // Setup SSE
+        res.writeHead(200, {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*'
+        });
+
+        // Stream each artist as found
+        (async () => {
+            let browser;
+            try {
+                browser = await puppeteer.launch(getPuppeteerOptions());
+                console.log(`[Puppeteer] Browser launched for streaming...`);
+
+                for (const uuid of uuids) {
+                    let page;
+                    let artist = 'Suno AI';
+                    try {
+                        page = await browser.newPage();
+                        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+                        await page.goto(`https://suno.com/song/${uuid}`, {
+                            waitUntil: 'domcontentloaded',
+                            timeout: 30000
+                        });
+
+                        try {
+                            await page.waitForSelector('a[href^="/@"]', { timeout: 10000 });
+                        } catch (e) {
+                            // Selector not found, continue anyway
+                        }
+
+                        const foundArtist = await page.evaluate(() => {
+                            const artistLink = document.querySelector('a[href^="/@"]');
+                            return artistLink ? artistLink.textContent.trim() : null;
+                        });
+
+                        if (foundArtist) artist = foundArtist;
+                        console.log(`[Puppeteer] ${uuid}: artist = "${artist}"`);
+
+                    } catch (e) {
+                        console.log(`[Puppeteer] ${uuid}: error - ${e.message}`);
+                    } finally {
+                        if (page) await page.close();
+                    }
+
+                    // Send this result immediately
+                    res.write(`data: ${JSON.stringify({ uuid, artist })}\n\n`);
+                }
+
+                // Send done event
+                res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+                res.end();
+
+            } catch (e) {
+                console.log(`[Puppeteer] Stream error: ${e.message}`);
+                res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+                res.end();
+            } finally {
+                if (browser) await browser.close();
+                console.log(`[Puppeteer] Browser closed`);
+            }
+        })();
+
         return;
     }
 
