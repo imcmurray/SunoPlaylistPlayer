@@ -31,6 +31,22 @@ const getPuppeteerOptions = () => ({
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Decode HTML entities in strings
+function decodeHtmlEntities(str) {
+    if (!str) return str;
+    return str
+        .replace(/&#x27;/g, "'")
+        .replace(/&#39;/g, "'")
+        .replace(/&apos;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&#x22;/g, '"')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(num))
+        .replace(/&#x([a-fA-F0-9]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
 // Fetch playlist songs using Puppeteer
 async function fetchPlaylistSongs(playlistUrl) {
     const playlistMatch = playlistUrl.match(/suno\.com\/playlist\/([a-f0-9-]+)/i);
@@ -189,7 +205,7 @@ async function fetchSongInfo(uuid) {
         let title = '';
         const ogTitleMatch = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["']/i);
         if (ogTitleMatch) {
-            title = ogTitleMatch[1].replace(/\s*\|\s*Suno$/i, '').trim();
+            title = decodeHtmlEntities(ogTitleMatch[1].replace(/\s*\|\s*Suno$/i, '').trim());
         }
         console.log(`[${uuid}] og:title = "${title || '(not found)'}"`);
 
