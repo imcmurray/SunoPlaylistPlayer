@@ -1,0 +1,20 @@
+{
+  "name": "suno-playlist-player",
+  "version": "1.0.0",
+  "description": "A web-based playlist player for Suno AI music with crossfade transitions",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": ["suno", "music", "playlist", "player", "embed"],
+  "author": "",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "puppeteer": "^24.36.1"
+  }
+}

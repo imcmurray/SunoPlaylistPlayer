@@ -1,0 +1,14 @@
+# Railway Nixpacks configuration for Puppeteer support
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "chromium"]
+
+[phases.install]
+cmds = ["npm ci || npm install"]
+
+[start]
+cmd = "node server.js"
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/nix/var/nix/profiles/default/bin/chromium"
