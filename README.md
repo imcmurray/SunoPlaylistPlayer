@@ -56,7 +56,7 @@ npm start
 ### Usage
 
 1. Open http://localhost:3000 in your browser
-2. Paste a Suno playlist URL (e.g., `https://suno.com/playlist/xxx-xxx-xxx`)
+2. Paste a Suno playlist URL (try this example: `https://suno.com/playlist/06077ddd-a0e5-49ca-9445-b0049e9b0513`)
 3. Click "Load Playlist" and enjoy!
 
 ## How It Works
