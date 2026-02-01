@@ -28,6 +28,8 @@ A beautiful web-based playlist player for [Suno AI](https://suno.com) music with
 
 ## Screenshots
 
+![Suno Playlist Player Interface](Screenshot-SunoPlaylistPlayer.png)
+
 *Player interface with crossfade controls and blurred background*
 
 ## Quick Start
@@ -41,8 +43,8 @@ A beautiful web-based playlist player for [Suno AI](https://suno.com) music with
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/suno-playlist-player.git
-cd suno-playlist-player
+git clone https://github.com/imcmurray/SunoPlaylistPlayer.git
+cd SunoPlaylistPlayer
 
 # Install dependencies
 npm install
