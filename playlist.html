@@ -904,12 +904,16 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
+            overflow-x: hidden;
+            overflow-y: visible;
+            grid-column: 1 / -1;
         }
 
         .playback-info {
             display: flex;
             align-items: center;
             gap: 12px;
+            flex-shrink: 0;
         }
 
         .mini-thumb {
@@ -939,6 +943,322 @@
         .queue-info {
             color: var(--text-muted);
             font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        /* Creator Playlists */
+        .creator-playlists {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 24px;
+            overflow: hidden;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+
+        .creator-playlists.hidden {
+            display: none;
+        }
+
+        .creator-playlists-link {
+            color: var(--text-secondary);
+            font-size: 13px;
+            text-decoration: none;
+            white-space: nowrap;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .creator-playlists-link:hover {
+            border-color: var(--accent);
+            color: var(--accent-light);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .creator-playlists-link.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .creator-playlists-link.loading::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Artist Selector Dropdown */
+        .artist-selector {
+            position: relative;
+        }
+
+        .artist-selector-btn {
+            color: var(--text-secondary);
+            font-size: 13px;
+            white-space: nowrap;
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .artist-selector-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent-light);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .artist-selector-btn.loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .artist-selector-btn.loading::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .artist-selector-btn .dropdown-arrow {
+            transition: transform 0.2s;
+        }
+
+        .artist-selector-btn.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .artist-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            margin-bottom: 8px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+            min-width: 200px;
+            max-width: 280px;
+            max-height: 300px;
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .artist-dropdown.visible {
+            display: flex;
+        }
+
+        .artist-dropdown-header {
+            padding: 12px 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .artist-dropdown-list {
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .artist-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .artist-dropdown-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .artist-dropdown-item .artist-initials {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .artist-dropdown-item .artist-name {
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .change-artist-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .change-artist-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .change-artist-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .creator-playlists-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 4px 0;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .creator-playlists-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .creator-playlist-card {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            max-width: 200px;
+        }
+
+        .creator-playlist-card:hover {
+            border-color: var(--accent);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .creator-playlist-card.current {
+            border-color: var(--accent);
+            background: rgba(102, 126, 234, 0.15);
+        }
+
+        .creator-playlist-card img {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .creator-playlist-card .placeholder-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .creator-playlist-card-info {
+            min-width: 0;
+        }
+
+        .creator-playlist-card-title {
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .creator-playlist-card-count {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .creator-playlists-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .playlist-scroll-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .playlist-scroll-btn.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .playlist-scroll-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .playlist-scroll-btn svg {
+            width: 16px;
+            height: 16px;
         }
 
         /* Responsive */
@@ -1096,6 +1416,7 @@
                         <option value="morph">Morph</option>
                     </select>
                 </div>
+
             </div>
         </main>
 
@@ -1108,6 +1429,34 @@
                 <div class="mini-info">
                     <h4 id="miniTitle">-</h4>
                     <p id="miniArtist">-</p>
+                </div>
+            </div>
+            <div class="creator-playlists hidden" id="creatorPlaylists">
+                <div class="artist-selector" id="artistSelector">
+                    <button class="artist-selector-btn" id="artistSelectorBtn" onclick="toggleArtistMenu(event)">
+                        <span id="artistSelectorText">More from @creator</span>
+                        <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+                    </button>
+                    <div class="artist-dropdown" id="artistDropdown">
+                        <div class="artist-dropdown-header">Select an artist</div>
+                        <div class="artist-dropdown-list" id="artistDropdownList">
+                            <!-- Artist items populated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="creator-playlists-wrapper" id="creatorPlaylistsWrapper" style="display: none;">
+                    <button class="change-artist-btn" id="changeArtistBtn" onclick="showArtistSelector()" title="Change artist">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    </button>
+                    <button class="playlist-scroll-btn" id="playlistScrollLeft" onclick="scrollPlaylists(-1)">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    </button>
+                    <div class="creator-playlists-scroll" id="creatorPlaylistsScroll">
+                        <!-- Playlist cards populated by JS -->
+                    </div>
+                    <button class="playlist-scroll-btn" id="playlistScrollRight" onclick="scrollPlaylists(1)">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                    </button>
                 </div>
             </div>
             <div class="queue-info">
@@ -1132,6 +1481,11 @@
         let isCrossfading = false;
         let crossfadeInterval = null;
         const transitionStyles = ['dissolve', 'slide', 'zoom', 'flip', 'morph'];
+
+        // Creator/playlist state
+        let currentPlaylistId = null;
+        let creatorUsername = null;
+        let selectedArtist = null;
 
         // Dual audio elements for crossfade
         let audioA = new Audio();
@@ -1181,6 +1535,41 @@
                 localStorage.setItem(SONG_CACHE_KEY, JSON.stringify(cache));
             } catch (e) {
                 console.log('Cache write error:', e);
+            }
+        }
+
+        // User playlists cache
+        const USER_PLAYLISTS_CACHE_KEY = 'sunoUserPlaylistsCache';
+
+        // Get cached user playlists
+        function getCachedUserPlaylists(username) {
+            try {
+                const cache = JSON.parse(localStorage.getItem(USER_PLAYLISTS_CACHE_KEY) || '{}');
+                const cached = cache[username.toLowerCase()];
+                if (cached) {
+                    const ageMs = Date.now() - (cached.timestamp || 0);
+                    const maxAgeMs = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
+                    if (ageMs < maxAgeMs) {
+                        return cached.playlists;
+                    }
+                }
+            } catch (e) {
+                console.log('User playlists cache read error:', e);
+            }
+            return null;
+        }
+
+        // Save user playlists to cache
+        function cacheUserPlaylists(username, playlists) {
+            try {
+                const cache = JSON.parse(localStorage.getItem(USER_PLAYLISTS_CACHE_KEY) || '{}');
+                cache[username.toLowerCase()] = {
+                    playlists: playlists,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(USER_PLAYLISTS_CACHE_KEY, JSON.stringify(cache));
+            } catch (e) {
+                console.log('User playlists cache write error:', e);
             }
         }
 
@@ -1309,11 +1698,17 @@
             playlist = [];
             currentIndex = 0;
             isPlaying = false;
+            currentPlaylistId = null;
+            creatorUsername = null;
+            selectedArtist = null;
 
             // Reset UI
             document.getElementById('playerContainer').style.display = 'none';
             document.getElementById('playerContainer').classList.remove('visible');
             document.getElementById('inputScreen').style.display = 'flex';
+
+            // Hide creator playlists section
+            document.getElementById('creatorPlaylists').classList.add('hidden');
 
             // Clear and re-render recent playlists
             document.getElementById('recentPlaylistsBg').innerHTML = '';
@@ -1372,6 +1767,10 @@
 
                 // Show songs being discovered in loading screen
                 showDiscoveredSongs(playlist);
+
+                // Store playlist ID and creator info
+                currentPlaylistId = data.playlistId;
+                creatorUsername = data.creatorUsername;
 
                 // Set playlist title
                 document.getElementById('playlistTitle').textContent = data.playlistTitle || 'Playlist';
@@ -1450,6 +1849,9 @@
                 // Fetch real artist names via Puppeteer in background (slower but accurate)
                 fetchArtistsInBackground();
 
+                // Show the "More from @creator" link if we have a creator
+                showCreatorPlaylistsLink();
+
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('loadingScreen').style.display = 'none';
@@ -1515,6 +1917,9 @@
                         if (index === currentIndex) {
                             updateNowPlayingInfo(playlist[index]);
                         }
+
+                        // Update artist button text as artists are discovered
+                        updateArtistButtonText();
 
                         console.log(`Updated artist for "${playlist[index].title}": ${artist}`);
                     }
@@ -2365,6 +2770,308 @@
             return div.innerHTML;
         }
 
+        // Get unique artists from the playlist (excluding "Suno AI")
+        function getUniqueArtists() {
+            const artistSet = new Map();
+            for (const song of playlist) {
+                if (song.artist && song.artist !== 'Suno AI') {
+                    // Use lowercase for deduplication but keep original case
+                    const key = song.artist.toLowerCase();
+                    if (!artistSet.has(key)) {
+                        artistSet.set(key, song.artist);
+                    }
+                }
+            }
+            return Array.from(artistSet.values());
+        }
+
+        // Toggle artist dropdown menu
+        function toggleArtistMenu(event) {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const artists = getUniqueArtists();
+
+            // If only one artist (or none), fetch directly without dropdown
+            if (artists.length <= 1) {
+                const artistToFetch = artists.length === 1 ? artists[0] : creatorUsername;
+                if (artistToFetch) {
+                    selectArtist(artistToFetch);
+                }
+                return;
+            }
+
+            // Multiple artists - show dropdown
+            const btn = document.getElementById('artistSelectorBtn');
+            const dropdown = document.getElementById('artistDropdown');
+
+            const isOpen = dropdown.classList.contains('visible');
+
+            if (isOpen) {
+                dropdown.classList.remove('visible');
+                btn.classList.remove('open');
+            } else {
+                updateArtistDropdown();
+                dropdown.classList.add('visible');
+                btn.classList.add('open');
+            }
+        }
+
+        // Update the artist dropdown with current artists
+        function updateArtistDropdown() {
+            const list = document.getElementById('artistDropdownList');
+            const artists = getUniqueArtists();
+
+            if (artists.length === 0) {
+                list.innerHTML = '<div style="padding: 12px; color: var(--text-muted); font-size: 13px;">No artists found yet...</div>';
+                return;
+            }
+
+            list.innerHTML = artists.map(artist => {
+                const initials = artist.split(' ')
+                    .map(word => word[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+
+                return `
+                    <div class="artist-dropdown-item" onclick="selectArtist('${escapeHtml(artist).replace(/'/g, "\\'")}')">
+                        <div class="artist-initials">${initials}</div>
+                        <div class="artist-name">@${escapeHtml(artist)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Select an artist and fetch their playlists
+        function selectArtist(artist) {
+            selectedArtist = artist;
+
+            // Close dropdown
+            document.getElementById('artistDropdown').classList.remove('visible');
+            document.getElementById('artistSelectorBtn').classList.remove('open');
+
+            // Fetch playlists for this artist
+            fetchArtistPlaylists(artist);
+        }
+
+        // Fetch playlists for a specific artist
+        async function fetchArtistPlaylists(username) {
+            const btn = document.getElementById('artistSelectorBtn');
+            const btnText = document.getElementById('artistSelectorText');
+            const selector = document.getElementById('artistSelector');
+            const wrapper = document.getElementById('creatorPlaylistsWrapper');
+
+            // Check cache first
+            const cachedPlaylists = getCachedUserPlaylists(username);
+            if (cachedPlaylists) {
+                console.log(`Using cached playlists for @${username}`);
+                if (cachedPlaylists.length > 0) {
+                    displayCreatorPlaylists(cachedPlaylists);
+                    selector.style.display = 'none';
+                    wrapper.style.display = 'flex';
+                } else {
+                    btnText.textContent = `No playlists from @${username}`;
+                }
+                return;
+            }
+
+            // Show loading state
+            btn.classList.add('loading');
+            btnText.textContent = `Loading @${username}...`;
+
+            console.log(`Fetching playlists for artist: @${username}`);
+
+            try {
+                const response = await fetch(`/api/fetch-user-playlists?username=${encodeURIComponent(username)}`);
+                if (!response.ok) throw new Error('Failed to fetch playlists');
+
+                const data = await response.json();
+                const playlists = data.playlists || [];
+
+                // Cache the result
+                cacheUserPlaylists(username, playlists);
+
+                if (playlists.length > 0) {
+                    displayCreatorPlaylists(playlists);
+                    // Hide selector, show playlists
+                    selector.style.display = 'none';
+                    wrapper.style.display = 'flex';
+                } else {
+                    btnText.textContent = `No playlists from @${username}`;
+                    btn.classList.remove('loading');
+                }
+            } catch (e) {
+                console.log('Error fetching artist playlists:', e);
+                btnText.textContent = `Failed to load playlists`;
+                btn.classList.remove('loading');
+            }
+        }
+
+        // Update artist button text as artists are discovered
+        function updateArtistButtonText() {
+            const artists = getUniqueArtists();
+            const btnText = document.getElementById('artistSelectorText');
+            const dropdownArrow = document.querySelector('.artist-selector-btn .dropdown-arrow');
+
+            if (artists.length === 0) {
+                btnText.textContent = creatorUsername ? `More from @${creatorUsername}` : 'No artists found';
+            } else if (artists.length === 1) {
+                btnText.textContent = `More from @${artists[0]}`;
+            } else {
+                btnText.textContent = `More from ${artists.length} artists`;
+            }
+
+            // Show/hide dropdown arrow based on artist count
+            if (dropdownArrow) {
+                dropdownArrow.style.display = artists.length > 1 ? '' : 'none';
+            }
+        }
+
+        // Show artist selector (go back from playlist view)
+        function showArtistSelector() {
+            const selector = document.getElementById('artistSelector');
+            const wrapper = document.getElementById('creatorPlaylistsWrapper');
+            const btn = document.getElementById('artistSelectorBtn');
+
+            // Reset state
+            selectedArtist = null;
+            btn.classList.remove('loading');
+
+            // Update button text
+            updateArtistButtonText();
+
+            // Show selector, hide playlists
+            selector.style.display = '';
+            wrapper.style.display = 'none';
+        }
+
+        // Show the artist selector (formerly "More from @creator" link)
+        function showCreatorPlaylistsLink() {
+            const container = document.getElementById('creatorPlaylists');
+            const selector = document.getElementById('artistSelector');
+            const wrapper = document.getElementById('creatorPlaylistsWrapper');
+
+            // Reset state
+            selectedArtist = null;
+
+            // Update artist button text
+            updateArtistButtonText();
+
+            // Show selector, hide playlists wrapper
+            selector.style.display = '';
+            wrapper.style.display = 'none';
+            container.classList.remove('hidden');
+        }
+
+        // Click outside listener to close dropdown
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('artistDropdown');
+            const btn = document.getElementById('artistSelectorBtn');
+
+            if (dropdown && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('visible');
+                btn.classList.remove('open');
+            }
+        });
+
+        // Display artist's playlists in the bottom bar
+        function displayCreatorPlaylists(playlists) {
+            const scroll = document.getElementById('creatorPlaylistsScroll');
+            const selector = document.getElementById('artistSelector');
+            const wrapper = document.getElementById('creatorPlaylistsWrapper');
+            const btn = document.getElementById('artistSelectorBtn');
+
+            // Filter out the current playlist and limit to 10
+            const otherPlaylists = playlists
+                .filter(p => p.id !== currentPlaylistId)
+                .slice(0, 10);
+
+            if (otherPlaylists.length === 0) {
+                const artistName = selectedArtist || creatorUsername;
+                document.getElementById('artistSelectorText').textContent = `No playlists from @${artistName}`;
+                btn.classList.remove('loading');
+                return;
+            }
+
+            // Hide selector, show playlist cards
+            selector.style.display = 'none';
+            wrapper.style.display = 'flex';
+
+            // Build playlist cards
+            scroll.innerHTML = otherPlaylists.map(p => `
+                <div class="creator-playlist-card" onclick="loadCreatorPlaylist('${p.url}')" title="${escapeHtml(p.title)}">
+                    ${p.coverUrl
+                        ? `<img src="${p.coverUrl}" alt="" onerror="this.outerHTML='<div class=\\'placeholder-img\\'>♫</div>'">`
+                        : '<div class="placeholder-img">♫</div>'
+                    }
+                    <div class="creator-playlist-card-info">
+                        <div class="creator-playlist-card-title">${escapeHtml(p.title)}</div>
+                        ${p.songCount ? `<div class="creator-playlist-card-count">${p.songCount} songs</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // Setup scroll button visibility
+            updatePlaylistScrollButtons();
+            scroll.addEventListener('scroll', updatePlaylistScrollButtons);
+        }
+
+        // Update scroll button visibility based on scroll position
+        function updatePlaylistScrollButtons() {
+            const scroll = document.getElementById('creatorPlaylistsScroll');
+            const leftBtn = document.getElementById('playlistScrollLeft');
+            const rightBtn = document.getElementById('playlistScrollRight');
+
+            if (!scroll || !leftBtn || !rightBtn) return;
+
+            const canScrollLeft = scroll.scrollLeft > 0;
+            const canScrollRight = scroll.scrollLeft < scroll.scrollWidth - scroll.clientWidth - 1;
+
+            leftBtn.classList.toggle('visible', canScrollLeft);
+            rightBtn.classList.toggle('visible', canScrollRight);
+        }
+
+        // Scroll playlists left or right
+        function scrollPlaylists(direction) {
+            const scroll = document.getElementById('creatorPlaylistsScroll');
+            if (!scroll) return;
+
+            const scrollAmount = 200;
+            scroll.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+        }
+
+        // Load a different playlist from the creator
+        function loadCreatorPlaylist(url) {
+            // Set the URL and trigger load
+            document.getElementById('playlistUrlInput').value = url;
+
+            // Stop current playback
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+            nextAudio.pause();
+            nextAudio.currentTime = 0;
+            cancelCrossfade();
+
+            // Reset state
+            playlist = [];
+            currentIndex = 0;
+            isPlaying = false;
+            currentPlaylistId = null;
+            creatorUsername = null;
+            selectedArtist = null;
+
+            // Hide creator playlists section
+            document.getElementById('creatorPlaylists').classList.add('hidden');
+
+            // Hide player, show loading
+            document.getElementById('playerContainer').style.display = 'none';
+            document.getElementById('playerContainer').classList.remove('visible');
+
+            // Load the new playlist
+            loadPlaylist();
+        }
+
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
@@ -2402,6 +3109,7 @@
                     break;
             }
         });
+
     </script>
 </body>
 </html>

@@ -135,10 +135,21 @@ async function fetchPlaylistSongs(playlistUrl) {
                     .forEach(uuid => songs.push({ uuid, title: '', artist: '' }));
             }
 
+            // Extract playlist title and creator
             const titleEl = document.querySelector('h1');
+
+            // Find playlist creator (/@username link)
+            let creatorUsername = null;
+            const creatorLink = document.querySelector('a[href^="/@"]');
+            if (creatorLink) {
+                const match = creatorLink.href.match(/\/@([a-zA-Z0-9_]+)/);
+                if (match) creatorUsername = match[1];
+            }
+
             return {
                 playlistId: plId,
                 playlistTitle: titleEl ? titleEl.textContent.trim() : 'Unknown Playlist',
+                creatorUsername,
                 songs
             };
         }, playlistId);
@@ -325,6 +336,278 @@ async function fetchArtistsViaPuppeteer(uuids) {
     return results;
 }
 
+// Fetch a user's playlists from their profile page
+async function fetchUserPlaylists(username) {
+    // First, try direct API call (much faster if it works)
+    try {
+        console.log(`[UserPlaylists] Trying direct API for @${username}...`);
+        const apiResponse = await fetch(`https://studio-api.suno.ai/api/profiles/${username}`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/json',
+            },
+            signal: AbortSignal.timeout(10000)
+        });
+
+        if (apiResponse.ok) {
+            const data = await apiResponse.json();
+            console.log(`[UserPlaylists] API response keys:`, Object.keys(data));
+
+            // Handle different response formats
+            let playlists = data.playlists || data.items || data.results || data;
+            if (Array.isArray(playlists) && playlists.length > 0) {
+                const result = playlists.map(p => ({
+                    id: p.id || p.playlist_id,
+                    url: `https://suno.com/playlist/${p.id || p.playlist_id}`,
+                    title: p.name || p.title || 'Playlist',
+                    coverUrl: p.image_url || p.image || p.cover_url || null,
+                    songCount: p.num_total_results || p.song_count || null
+                })).filter(p => p.id);
+
+                console.log(`[UserPlaylists] Found ${result.length} playlists via API`);
+                return result;
+            }
+        } else {
+            console.log(`[UserPlaylists] API returned ${apiResponse.status}`);
+        }
+    } catch (e) {
+        console.log(`[UserPlaylists] API call failed: ${e.message}`);
+    }
+
+    // Fallback to Puppeteer
+    let browser;
+
+    try {
+        browser = await puppeteer.launch(getPuppeteerOptions());
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+        // Try to avoid bot detection
+        await page.evaluateOnNewDocument(() => {
+            Object.defineProperty(navigator, 'webdriver', { get: () => false });
+        });
+
+        // Intercept network requests to find API calls
+        const apiCalls = [];
+        await page.setRequestInterception(true);
+        page.on('request', request => {
+            const url = request.url();
+            if (url.includes('api') || url.includes('playlist')) {
+                apiCalls.push(url);
+            }
+            request.continue();
+        });
+
+        // Go to the user's profile page
+        const profileUrl = `https://suno.com/@${username}`;
+        console.log(`[UserPlaylists] Navigating to: ${profileUrl}`);
+        await page.goto(profileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+        // Wait longer for JS to render and API calls to happen
+        await sleep(8000);
+
+        // Log any API calls we intercepted
+        if (apiCalls.length > 0) {
+            console.log(`[UserPlaylists] Intercepted API calls:`);
+            apiCalls.forEach(url => console.log(`  - ${url}`));
+        }
+
+        // Wait for content to load - look for any link or give it time
+        try {
+            await page.waitForSelector('a[href*="/playlist/"]', { timeout: 5000 });
+            console.log(`[UserPlaylists] Found playlist links`);
+        } catch (e) {
+            console.log(`[UserPlaylists] No playlist links found after waiting`);
+        }
+
+        await sleep(1000);
+
+        // Scroll to load more content
+        await page.evaluate(async () => {
+            await new Promise((resolve) => {
+                let totalHeight = 0;
+                const distance = 500;
+                const timer = setInterval(() => {
+                    window.scrollBy(0, distance);
+                    totalHeight += distance;
+                    if (totalHeight >= document.body.scrollHeight) {
+                        clearInterval(timer);
+                        resolve();
+                    }
+                }, 200);
+                setTimeout(() => { clearInterval(timer); resolve(); }, 5000);
+            });
+        });
+
+        await sleep(1000);
+
+        // Try to extract from __NEXT_DATA__ first (faster and more reliable)
+        const nextDataPlaylists = await page.evaluate(() => {
+            const nextDataEl = document.getElementById('__NEXT_DATA__');
+            if (!nextDataEl) return null;
+
+            try {
+                const data = JSON.parse(nextDataEl.textContent);
+                console.log('__NEXT_DATA__ keys:', Object.keys(data.props?.pageProps || {}));
+
+                // Look for playlists in various possible locations
+                const pageProps = data.props?.pageProps || {};
+
+                // Check common locations for playlist data
+                let playlists = pageProps.playlists ||
+                               pageProps.userPlaylists ||
+                               pageProps.profile?.playlists ||
+                               pageProps.user?.playlists ||
+                               null;
+
+                if (playlists && Array.isArray(playlists)) {
+                    return playlists.map(p => ({
+                        id: p.id || p.playlist_id,
+                        title: p.name || p.title || 'Playlist',
+                        coverUrl: p.image_url || p.cover_url || p.image || null,
+                        songCount: p.num_total_results || p.song_count || p.count || null
+                    })).filter(p => p.id);
+                }
+
+                // Return keys for debugging
+                return { debug: true, keys: Object.keys(pageProps) };
+            } catch (e) {
+                return { error: e.message };
+            }
+        });
+
+        if (nextDataPlaylists && !nextDataPlaylists.debug && !nextDataPlaylists.error) {
+            console.log(`[UserPlaylists] Found ${nextDataPlaylists.length} playlists from __NEXT_DATA__`);
+            return nextDataPlaylists.map(p => ({
+                ...p,
+                url: `https://suno.com/playlist/${p.id}`
+            }));
+        }
+
+        if (nextDataPlaylists?.debug) {
+            console.log(`[UserPlaylists] __NEXT_DATA__ keys:`, nextDataPlaylists.keys);
+        }
+        if (nextDataPlaylists?.error) {
+            console.log(`[UserPlaylists] __NEXT_DATA__ error:`, nextDataPlaylists.error);
+        }
+
+        // Debug: log what we find on the page
+        const debugInfo = await page.evaluate(() => {
+            const allLinks = Array.from(document.querySelectorAll('a')).map(a => a.href).filter(h => h.includes('playlist'));
+            const html = document.body.innerHTML;
+            const playlistMatches = html.match(/playlist\/[a-f0-9-]+/gi) || [];
+            return {
+                playlistLinks: allLinks.slice(0, 10),
+                playlistIdsInHtml: [...new Set(playlistMatches)].slice(0, 10),
+                pageTitle: document.title,
+                bodyLength: html.length
+            };
+        });
+        console.log(`[UserPlaylists] DOM Debug:`, JSON.stringify(debugInfo, null, 2));
+
+        // Fallback: Extract playlist data from DOM
+        const playlists = await page.evaluate(() => {
+            const results = [];
+            const seen = new Set();
+
+            // Find playlist links
+            document.querySelectorAll('a[href*="/playlist/"]').forEach(a => {
+                const match = a.href.match(/\/playlist\/([a-f0-9-]+)/i);
+                if (match && !seen.has(match[1])) {
+                    seen.add(match[1]);
+
+                    // Try to find playlist info
+                    let title = '';
+                    let coverUrl = null;
+                    let songCount = null;
+
+                    // Walk up to find a reasonable container (but not too far)
+                    let container = a.parentElement;
+                    for (let i = 0; i < 5 && container; i++) {
+                        // Check if this container has the info we need
+                        const texts = Array.from(container.querySelectorAll('p, span, h1, h2, h3, h4, h5, h6, div'))
+                            .map(el => el.textContent.trim())
+                            .filter(t => t.length > 0 && t.length < 80 && !t.includes('http'));
+
+                        // Find a good title candidate (not just numbers, not too short, not song count)
+                        for (let text of texts) {
+                            // Skip if it's just a song count
+                            if (/^\d+\s*songs?$/i.test(text)) continue;
+                            // Skip if it's just a number
+                            if (/^\d+$/.test(text)) continue;
+                            // Skip if too short
+                            if (text.length <= 2) continue;
+
+                            // Remove trailing song count pattern (e.g., "ExMormon19 songs" -> "ExMormon")
+                            text = text.replace(/\s*\d+\s*songs?\s*$/i, '').trim();
+
+                            if (text.length > 2) {
+                                title = text;
+                                break;
+                            }
+                        }
+
+                        // Find cover image
+                        if (!coverUrl) {
+                            const img = container.querySelector('img');
+                            if (img && img.src && !img.src.includes('avatar') && !img.src.includes('profile')) {
+                                coverUrl = img.src;
+                            }
+                        }
+
+                        // Look for song count - find element with exact "N songs" pattern
+                        if (!songCount) {
+                            const candidates = container.querySelectorAll('p, span, div');
+                            for (const el of candidates) {
+                                const text = el.textContent.trim();
+                                // Match exactly "N songs" or "N song" (not part of larger text)
+                                const countMatch = text.match(/^(\d+)\s*songs?$/i);
+                                if (countMatch) {
+                                    const count = parseInt(countMatch[1]);
+                                    // Sanity check - playlists rarely have more than 1000 songs
+                                    if (count > 0 && count < 10000) {
+                                        songCount = count;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (title && coverUrl) break;
+                        container = container.parentElement;
+                    }
+
+                    // Fallback: use link text as title
+                    if (!title && a.textContent.trim().length > 2 && a.textContent.trim().length < 80) {
+                        title = a.textContent.trim().replace(/\s*\d+\s*songs?\s*$/i, '').trim();
+                    }
+
+                    // If still no title, use a placeholder
+                    if (!title || title.length < 2) {
+                        title = 'Playlist';
+                    }
+
+                    results.push({
+                        id: match[1],
+                        url: `https://suno.com/playlist/${match[1]}`,
+                        title,
+                        coverUrl,
+                        songCount
+                    });
+                }
+            });
+
+            return results;
+        });
+
+        console.log(`[UserPlaylists] Extracted ${playlists.length} playlists from DOM`);
+        return playlists;
+
+    } finally {
+        if (browser) await browser.close();
+    }
+}
+
 // Fetch multiple songs using direct HTTP (parallel for speed)
 async function fetchSongInfoBatch(uuids) {
     const results = {};
@@ -482,6 +765,34 @@ const server = http.createServer(async (req, res) => {
             }
         })();
 
+        return;
+    }
+
+    // API endpoint to fetch a user's playlists
+    if (url.pathname === '/api/fetch-user-playlists' && req.method === 'GET') {
+        const username = url.searchParams.get('username');
+
+        if (!username) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Missing username parameter' }));
+            return;
+        }
+
+        try {
+            console.log(`Fetching playlists for user: @${username}`);
+            const playlists = await fetchUserPlaylists(username);
+            console.log(`Found ${playlists.length} playlists for @${username}`);
+
+            res.writeHead(200, {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            });
+            res.end(JSON.stringify({ username, playlists }));
+        } catch (error) {
+            console.error('Error fetching user playlists:', error.message);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: error.message }));
+        }
         return;
     }
 
