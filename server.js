@@ -15,19 +15,29 @@ const puppeteer = require('puppeteer');
 
 const PORT = process.env.PORT || 3000;
 
-// Puppeteer launch options (configured for Railway/production)
-const getPuppeteerOptions = () => ({
-    headless: 'new',
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
-    args: [
+// Puppeteer launch options (platform-aware)
+const getPuppeteerOptions = () => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isMac = process.platform === 'darwin';
+
+    const args = [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-zygote'
-    ]
-});
+        '--disable-gpu'
+    ];
+
+    // These flags cause crashes on macOS but are needed for Docker/production
+    if (isProduction && !isMac) {
+        args.push('--single-process', '--no-zygote');
+    }
+
+    return {
+        headless: 'new',
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        args
+    };
+};
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
