@@ -15,27 +15,32 @@ const puppeteer = require('puppeteer');
 
 const PORT = process.env.PORT || 3000;
 
-// Puppeteer launch options (platform-aware)
+// Puppeteer launch options (environment-aware)
 const getPuppeteerOptions = () => {
-    const isProduction = process.env.NODE_ENV === 'production';
-    const isMac = process.platform === 'darwin';
+    const isDocker = process.env.PUPPETEER_EXECUTABLE_PATH || process.env.NODE_ENV === 'production';
 
     const args = [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--disable-software-rasterizer'
     ];
 
-    // These flags cause crashes on macOS but are needed for Docker/production
-    if (isProduction && !isMac) {
-        args.push('--single-process', '--no-zygote');
+    // These flags are needed for Docker but can cause crashes locally
+    if (isDocker) {
+        args.push(
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--single-process',
+            '--no-zygote'
+        );
     }
 
     return {
-        headless: 'new',
+        headless: true,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-        args
+        args,
+        // Disable Chrome's crash reporter which can cause issues
+        ignoreDefaultArgs: ['--enable-crashpad']
     };
 };
 
