@@ -1,7 +1,6 @@
-baseURL = "/"
+baseURL = "https://imcmurray.github.io/suno-music-library/"
 languageCode = "en-us"
 title = "My Suno Music Library"
-theme = ""
 
 # Enable JSON output for API-like access
 [outputs]
