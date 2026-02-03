@@ -356,6 +356,22 @@
             font-size: 13px;
         }
 
+        .playlist-description {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            opacity: 0.8;
+        }
+
+        .playlist-description:empty {
+            display: none;
+        }
+
         .back-btn {
             width: 36px;
             height: 36px;
@@ -571,6 +587,43 @@
         .now-playing-artist {
             color: var(--text-secondary);
             font-size: 1.1em;
+        }
+
+        .song-metadata {
+            margin-top: 16px;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .song-style {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            opacity: 0.7;
+            font-style: italic;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .song-style:empty {
+            display: none;
+        }
+
+        .song-description {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin-top: 12px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .song-description:empty {
+            display: none;
         }
 
         /* Progress Bar */
@@ -1337,6 +1390,7 @@
                 <div class="sidebar-header-text">
                     <h2 id="playlistTitle">Playlist</h2>
                     <p id="playlistCount">0 songs</p>
+                    <p id="playlistDescription" class="playlist-description"></p>
                 </div>
             </div>
             <div class="song-list" id="songList">
@@ -1362,10 +1416,18 @@
                 <div class="now-playing-info-inner current" id="nowPlayingInfoCurrent">
                     <h1 class="now-playing-title" id="nowPlayingTitle">Select a song</h1>
                     <p class="now-playing-artist" id="nowPlayingArtist">-</p>
+                    <div class="song-metadata" id="songMetadata">
+                        <p class="song-style" id="songStyle"></p>
+                        <p class="song-description" id="songDescription"></p>
+                    </div>
                 </div>
                 <div class="now-playing-info-inner next" id="nowPlayingInfoNext">
                     <h1 class="now-playing-title" id="nowPlayingTitleNext">-</h1>
                     <p class="now-playing-artist" id="nowPlayingArtistNext">-</p>
+                    <div class="song-metadata">
+                        <p class="song-style" id="songStyleNext"></p>
+                        <p class="song-description" id="songDescriptionNext"></p>
+                    </div>
                 </div>
             </div>
 
@@ -1572,6 +1634,8 @@
                     title: data.title,
                     artist: data.artist,
                     coverUrl: data.coverUrl,
+                    style: data.style || '',
+                    description: data.description || '',
                     timestamp: Date.now()
                 };
                 localStorage.setItem(SONG_CACHE_KEY, JSON.stringify(cache));
@@ -1801,6 +1865,8 @@
                         artist: cached?.artist || song.artist || 'Suno AI',
                         audioUrl: `https://cdn1.suno.ai/${song.uuid}.m4a`,
                         coverUrl: cached?.coverUrl || null,
+                        style: cached?.style || '',
+                        description: cached?.description || '',
                         duration: 0,
                         metadataLoaded: hasCachedData,
                         fetchFailed: false
@@ -1814,9 +1880,10 @@
                 currentPlaylistId = data.playlistId;
                 creatorUsername = data.creatorUsername;
 
-                // Set playlist title
+                // Set playlist title and description
                 document.getElementById('playlistTitle').textContent = data.playlistTitle || 'Playlist';
                 document.getElementById('playlistCount').textContent = `${playlist.length} songs`;
+                document.getElementById('playlistDescription').textContent = data.playlistDescription || '';
 
                 // Fetch first 3 songs one at a time before starting playback
                 // Each song gets its own timeout so we properly wait for each
@@ -1853,6 +1920,8 @@
                                 if (info.title && info.title.length > 0) song.title = info.title;
                                 if (info.artist && info.artist.length > 0) song.artist = info.artist;
                                 if (info.coverUrl) song.coverUrl = info.coverUrl;
+                                if (info.style) song.style = info.style;
+                                if (info.description) song.description = info.description;
 
                                 // Cache successful fetch
                                 if (song.artist !== 'Suno AI') {
@@ -1902,28 +1971,31 @@
             }
         }
 
-        // Fetch real artist names via Puppeteer in background (streaming)
+        // Fetch real artist names and metadata via Puppeteer in background (streaming)
         function fetchArtistsInBackground() {
-            // Find songs that still have "Suno AI" as artist
-            const songsNeedingArtist = playlist
+            // Find songs that need artist, style, or description
+            const songsNeedingData = playlist
                 .map((song, index) => ({ uuid: song.uuid, index }))
-                .filter((_, i) => playlist[i].artist === 'Suno AI');
+                .filter((_, i) => {
+                    const song = playlist[i];
+                    return song.artist === 'Suno AI' || !song.style || !song.description;
+                });
 
-            if (songsNeedingArtist.length === 0) {
-                console.log('All songs already have artist names');
+            if (songsNeedingData.length === 0) {
+                console.log('All songs already have complete metadata');
                 return;
             }
 
             // Build UUID to index map
             const uuidToIndex = {};
-            for (const { uuid, index } of songsNeedingArtist) {
+            for (const { uuid, index } of songsNeedingData) {
                 uuidToIndex[uuid] = index;
             }
 
-            console.log(`Fetching artist names for ${songsNeedingArtist.length} songs via Puppeteer...`);
+            console.log(`Fetching metadata for ${songsNeedingData.length} songs via Puppeteer...`);
 
             // Use Server-Sent Events for streaming updates
-            const uuids = songsNeedingArtist.map(s => s.uuid).join(',');
+            const uuids = songsNeedingData.map(s => s.uuid).join(',');
             const eventSource = new EventSource(`/api/fetch-artists-stream?uuids=${encodeURIComponent(uuids)}`);
 
             eventSource.onmessage = (event) => {
@@ -1942,28 +2014,43 @@
                         return;
                     }
 
-                    const { uuid, artist } = data;
+                    const { uuid, artist, style, description } = data;
                     const index = uuidToIndex[uuid];
 
-                    if (index !== undefined && artist && artist !== 'Suno AI') {
-                        playlist[index].artist = artist;
-                        playlist[index].fetchFailed = false;
+                    if (index !== undefined) {
+                        let updated = false;
 
-                        // Update cache
-                        cacheSongMetadata(uuid, playlist[index]);
-
-                        // Update UI immediately
-                        updateSongListItem(index, playlist[index]);
-
-                        // Update now playing if this is the current song
-                        if (index === currentIndex) {
-                            updateNowPlayingInfo(playlist[index]);
+                        if (artist && artist !== 'Suno AI') {
+                            playlist[index].artist = artist;
+                            playlist[index].fetchFailed = false;
+                            updated = true;
                         }
 
-                        // Update artist button text as artists are discovered
-                        updateArtistButtonText();
+                        // Update style and description if available
+                        if (style && !playlist[index].style) {
+                            playlist[index].style = style;
+                            updated = true;
+                        }
+                        if (description && !playlist[index].description) {
+                            playlist[index].description = description;
+                            updated = true;
+                        }
 
-                        console.log(`Updated artist for "${playlist[index].title}": ${artist}`);
+                        if (updated) {
+                            // Update cache
+                            cacheSongMetadata(uuid, playlist[index]);
+
+                            // Update UI immediately
+                            updateSongListItem(index, playlist[index]);
+
+                            // Update now playing if this is the current song
+                            if (index === currentIndex) {
+                                updateNowPlayingInfo(playlist[index]);
+                            }
+
+                            // Update artist button text as artists are discovered
+                            updateArtistButtonText();
+                        }
                     }
                 } catch (e) {
                     console.log('Error parsing artist stream:', e);
@@ -2023,6 +2110,8 @@
                         if (info.title && info.title.length > 0) song.title = info.title;
                         if (info.artist && info.artist.length > 0) song.artist = info.artist;
                         if (info.coverUrl) song.coverUrl = info.coverUrl;
+                        if (info.style) song.style = info.style;
+                        if (info.description) song.description = info.description;
                     }
 
                     // Consider it failed if we still have default artist
@@ -2106,6 +2195,13 @@
                         if (info.coverUrl && needsCover) {
                             song.coverUrl = info.coverUrl;
                         }
+                        // Always update style and description if available and not already set
+                        if (info.style && !song.style) {
+                            song.style = info.style;
+                        }
+                        if (info.description && !song.description) {
+                            song.description = info.description;
+                        }
                     }
 
                     // Check if we now have what we need
@@ -2166,6 +2262,8 @@
         function updateNowPlayingInfo(song) {
             document.getElementById('nowPlayingTitle').textContent = song.title;
             document.getElementById('nowPlayingArtist').textContent = song.artist;
+            document.getElementById('songStyle').textContent = song.style || '';
+            document.getElementById('songDescription').textContent = song.description || '';
             document.getElementById('miniTitle').textContent = song.title;
             document.getElementById('miniArtist').textContent = song.artist;
             document.title = `${song.title} - Suno Playlist Player`;
@@ -2348,6 +2446,8 @@
         function updateNowPlaying(song) {
             document.getElementById('nowPlayingTitle').textContent = song.title;
             document.getElementById('nowPlayingArtist').textContent = song.artist;
+            document.getElementById('songStyle').textContent = song.style || '';
+            document.getElementById('songDescription').textContent = song.description || '';
 
             // Cover art
             const artEl = document.getElementById('nowPlayingArt');
@@ -2644,6 +2744,8 @@
             // Next song info
             document.getElementById('nowPlayingTitleNext').textContent = song.title;
             document.getElementById('nowPlayingArtistNext').textContent = song.artist;
+            document.getElementById('songStyleNext').textContent = song.style || '';
+            document.getElementById('songDescriptionNext').textContent = song.description || '';
 
             // Next background
             const nextBgEl = document.getElementById('mainContentBgNext');
@@ -2693,6 +2795,8 @@
             // Swap info content
             document.getElementById('nowPlayingTitle').textContent = song.title;
             document.getElementById('nowPlayingArtist').textContent = song.artist;
+            document.getElementById('songStyle').textContent = song.style || '';
+            document.getElementById('songDescription').textContent = song.description || '';
 
             const currentInfoEl = document.getElementById('nowPlayingInfoCurrent');
             const nextInfoEl = document.getElementById('nowPlayingInfoNext');
@@ -2962,6 +3066,9 @@
                 } else {
                     btnText.textContent = `No playlists from @${username}`;
                 }
+
+                // Check for new playlists in the background
+                refreshArtistPlaylists(username, cachedPlaylists);
                 return;
             }
 
@@ -2994,6 +3101,43 @@
                 console.log('Error fetching artist playlists:', e);
                 btnText.textContent = `Failed to load playlists`;
                 btn.classList.remove('loading');
+            }
+        }
+
+        // Refresh artist playlists in the background to check for new ones
+        async function refreshArtistPlaylists(username, cachedPlaylists) {
+            console.log(`Checking for new playlists from @${username}...`);
+
+            try {
+                const response = await fetch(`/api/fetch-user-playlists?username=${encodeURIComponent(username)}`);
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const freshPlaylists = data.playlists || [];
+
+                // Check if there are new playlists not in the cache
+                const cachedIds = new Set(cachedPlaylists.map(p => p.id));
+                const newPlaylists = freshPlaylists.filter(p => !cachedIds.has(p.id));
+
+                if (newPlaylists.length > 0) {
+                    console.log(`Found ${newPlaylists.length} new playlist(s) from @${username}`);
+
+                    // Update cache with fresh data
+                    cacheUserPlaylists(username, freshPlaylists);
+
+                    // Re-display with updated playlists
+                    displayCreatorPlaylists(freshPlaylists);
+                } else if (freshPlaylists.length !== cachedPlaylists.length) {
+                    // Playlist count changed (some may have been removed)
+                    console.log(`Playlist count changed for @${username}, updating cache`);
+                    cacheUserPlaylists(username, freshPlaylists);
+                    displayCreatorPlaylists(freshPlaylists);
+                } else {
+                    console.log(`No new playlists from @${username}`);
+                }
+            } catch (e) {
+                console.log('Background refresh failed:', e);
+                // Silently fail - we already showed cached data
             }
         }
 
