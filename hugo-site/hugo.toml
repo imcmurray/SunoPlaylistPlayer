@@ -1,0 +1,47 @@
+baseURL = "/"
+languageCode = "en-us"
+title = "My Suno Music Library"
+theme = ""
+
+# Enable JSON output for API-like access
+[outputs]
+home = ["HTML", "JSON"]
+section = ["HTML", "JSON"]
+
+[params]
+description = "A personal library of music discovered on Suno"
+author = "Music Lover"
+# CDN URLs for Suno content
+audioCDN = "https://cdn1.suno.ai"
+imageCDN = "https://cdn2.suno.ai"
+
+[menu]
+[[menu.main]]
+name = "Home"
+url = "/"
+weight = 1
+
+[[menu.main]]
+name = "Playlists"
+url = "/playlists/"
+weight = 2
+
+[[menu.main]]
+name = "Songs"
+url = "/songs/"
+weight = 3
+
+# Taxonomy for organizing content
+[taxonomies]
+artist = "artists"
+playlist = "playlists"
+
+# Build settings
+[build]
+writeStats = true
+
+# Markup settings
+[markup]
+[markup.goldmark]
+[markup.goldmark.renderer]
+unsafe = true

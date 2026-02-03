@@ -1,0 +1,42 @@
+{{ define "main" }}
+<div class="playlists-page">
+    <header class="page-header">
+        <h1>Playlists</h1>
+    </header>
+
+    {{ $playlists := (index .Site.Data "playlists") | default dict }}
+    {{ if $playlists }}
+    <div class="playlist-grid">
+        {{ range $id, $playlist := $playlists }}
+        <a href="{{ printf "/playlists/%s/" $id | relURL }}" class="playlist-card">
+            <div class="playlist-cover-wrap">
+                {{ if $playlist.coverUrl }}
+                <img src="{{ $playlist.coverUrl }}" alt="{{ $playlist.title }}" class="playlist-cover" loading="lazy">
+                {{ else }}
+                <div class="playlist-cover placeholder">
+                    <svg viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                </div>
+                {{ end }}
+                <div class="playlist-play-overlay">
+                    <svg viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+                </div>
+            </div>
+            <div class="playlist-info">
+                <h3 class="playlist-title">{{ $playlist.title }}</h3>
+                <p class="playlist-meta">
+                    {{ with $playlist.creator }}{{ . }} &bull; {{ end }}
+                    {{ len $playlist.songs }} songs
+                </p>
+            </div>
+        </a>
+        {{ end }}
+    </div>
+    {{ else }}
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" width="64" height="64"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        <h2>No playlists yet</h2>
+        <p>Sync your playlists from the Suno Playlist Player to see them here.</p>
+    </div>
+    {{ end }}
+</div>
+{{ end }}
