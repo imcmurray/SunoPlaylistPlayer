@@ -6,10 +6,13 @@ A beautiful web-based playlist player for [Suno AI](https://suno.com) music with
 
 ## Features
 
+- **Supports Artists** - Play counts are reported to Suno so artists get credit for plays
 - **Playlist Loading** - Just paste a Suno playlist URL and play
 - **Real-time Artist Names** - Artist names load in the background via Puppeteer and update the UI as they're found
 - **Beautiful UI** - Dark theme with blurred album art backgrounds
-- **Crossfade Transitions** - Smooth audio crossfading (0-10 seconds)
+- **Smooth Fade-In** - Songs fade in gently to avoid jarring loud starts
+- **Crossfade Transitions** - Smooth audio crossfading (0-10 seconds, defaults to 10s)
+- **Smart Shuffle** - Plays through all songs before repeating any
 - **Visual Transitions** - 5 transition styles + random mode:
   - Dissolve
   - Slide
@@ -85,9 +88,21 @@ The server uses [Puppeteer](https://pptr.dev/) to fetch playlist data from Suno:
 
 ## Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for instructions on deploying to Railway with GitHub Actions.
+### Docker (Recommended)
 
-### Quick Deploy to Railway
+```bash
+# Download and run (no clone needed)
+curl -O https://raw.githubusercontent.com/imcmurray/SunoPlaylistPlayer/main/docker-compose.yml
+docker compose up -d
+```
+
+Access at http://localhost:3000
+
+See [DOCKER.md](DOCKER.md) for homelab setup, reverse proxy configs, and troubleshooting.
+
+### Railway
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for instructions on deploying to Railway with GitHub Actions.
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template)
 
@@ -98,8 +113,11 @@ suno-playlist-player/
 ├── server.js           # Node.js server with Puppeteer
 ├── playlist.html       # Main player interface
 ├── package.json        # Dependencies and scripts
+├── Dockerfile          # Docker build config
+├── docker-compose.yml  # Docker Compose config
+├── DOCKER.md           # Docker/homelab deployment guide
 ├── nixpacks.toml       # Railway build config
-├── DEPLOYMENT.md       # Deployment guide
+├── DEPLOYMENT.md       # Railway deployment guide
 └── .github/
     └── workflows/
         └── deploy.yml  # GitHub Actions workflow
