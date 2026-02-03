@@ -1,0 +1,19 @@
+services:
+  suno-player:
+    build: https://github.com/imcmurray/SunoPlaylistPlayer.git
+    container_name: suno-playlist-player
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    shm_size: '1gb'
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M

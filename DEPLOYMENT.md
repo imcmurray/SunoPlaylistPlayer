@@ -7,7 +7,7 @@ This guide walks you through deploying the Suno Playlist Player to [Railway](htt
 ```
 ┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
 │                 │         │                 │         │                 │
-│  GitHub Repo    │────────▶│  Railway        │────────▶│  Suno.com       │
+│  GitHub Repo    │───────▶│  Railway        │───────▶│  Suno.com       │
 │  (Push to main) │         │  (Node.js +     │         │  (Scrape data)  │
 │                 │         │   Puppeteer)    │         │                 │
 └─────────────────┘         └─────────────────┘         └─────────────────┘
