@@ -8,12 +8,10 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-    shm_size: '1gb'
+    shm_size: '2gb'
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G
         reservations:
-          memory: 512M
+          memory: 1G
