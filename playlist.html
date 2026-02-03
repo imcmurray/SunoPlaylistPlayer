@@ -1805,6 +1805,10 @@
         let creatorUsername = null;
         let selectedArtist = null;
 
+        // Background fetch tracking (to cancel on playlist switch)
+        let artistEventSource = null;
+        let backgroundFetchAborted = false;
+
         // Play count tracking
         let lastPlayCountedUuid = null;
 
@@ -2056,6 +2060,9 @@
             nextAudio.currentTime = 0;
             cancelCrossfade();
 
+            // Cancel any background fetches from previous playlist
+            cancelBackgroundFetches();
+
             // Reset state
             playlist = [];
             currentIndex = 0;
@@ -2081,6 +2088,17 @@
             window.history.replaceState({}, '', window.location.pathname);
         }
 
+        // Cancel any running background fetches
+        function cancelBackgroundFetches() {
+            // Close EventSource for artist streaming
+            if (artistEventSource) {
+                artistEventSource.close();
+                artistEventSource = null;
+            }
+            // Set flag to abort the metadata fetch loop
+            backgroundFetchAborted = true;
+        }
+
         // Load playlist
         async function loadPlaylist() {
             const url = document.getElementById('playlistUrlInput').value.trim();
@@ -2090,6 +2108,10 @@
                 errorEl.textContent = 'Please enter a valid Suno playlist URL';
                 return;
             }
+
+            // Cancel any previous background fetches before loading new playlist
+            cancelBackgroundFetches();
+            backgroundFetchAborted = false;
 
             // Show loading (reset any previous fade-out state)
             document.getElementById('inputScreen').style.display = 'none';
@@ -2253,30 +2275,38 @@
 
             console.log(`Fetching metadata for ${songsNeedingData.length} songs via Puppeteer...`);
 
+            // Close any existing EventSource before starting a new one
+            if (artistEventSource) {
+                artistEventSource.close();
+            }
+
             // Use Server-Sent Events for streaming updates
             const uuids = songsNeedingData.map(s => s.uuid).join(',');
-            const eventSource = new EventSource(`/api/fetch-artists-stream?uuids=${encodeURIComponent(uuids)}`);
+            artistEventSource = new EventSource(`/api/fetch-artists-stream?uuids=${encodeURIComponent(uuids)}`);
 
-            eventSource.onmessage = (event) => {
+            artistEventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
 
                     if (data.done) {
                         console.log('Artist streaming complete');
-                        eventSource.close();
+                        artistEventSource.close();
+                        artistEventSource = null;
                         return;
                     }
 
                     if (data.error) {
                         console.log('Artist stream error:', data.error);
-                        eventSource.close();
+                        artistEventSource.close();
+                        artistEventSource = null;
                         return;
                     }
 
                     const { uuid, artist, style, description } = data;
                     const index = uuidToIndex[uuid];
 
-                    if (index !== undefined) {
+                    // Verify the playlist hasn't changed and the song at this index matches
+                    if (index !== undefined && playlist[index] && playlist[index].uuid === uuid) {
                         let updated = false;
 
                         if (artist && artist !== 'Suno AI') {
@@ -2316,15 +2346,24 @@
                 }
             };
 
-            eventSource.onerror = (e) => {
+            artistEventSource.onerror = (e) => {
                 console.log('Artist stream connection closed');
-                eventSource.close();
+                if (artistEventSource) {
+                    artistEventSource.close();
+                    artistEventSource = null;
+                }
             };
         }
 
         // Fetch remaining metadata 1-by-1 in background after player starts
         async function fetchRemainingMetadataInBackground(startIndex) {
             for (let i = startIndex; i < playlist.length; i++) {
+                // Check if we should abort (user switched playlists)
+                if (backgroundFetchAborted) {
+                    console.log('Background metadata fetch aborted');
+                    return;
+                }
+
                 const song = playlist[i];
 
                 // Skip if already loaded from cache
@@ -2345,6 +2384,7 @@
         // Fetch metadata for a single song with timeout
         async function fetchSongMetadata(index) {
             const song = playlist[index];
+            const songUuid = song.uuid; // Capture UUID to verify we're updating the right playlist
             let fetchFailed = false;
 
             // Create abort controller for timeout
@@ -2360,6 +2400,11 @@
                 });
 
                 clearTimeout(timeoutId);
+
+                // Check if playlist was switched during fetch
+                if (backgroundFetchAborted || !playlist[index] || playlist[index].uuid !== songUuid) {
+                    return;
+                }
 
                 if (response.ok) {
                     const results = await response.json();
@@ -2387,6 +2432,11 @@
                 clearTimeout(timeoutId);
                 console.log(`Metadata fetch failed for song ${index}:`, e.name === 'AbortError' ? 'Timeout' : e);
                 fetchFailed = true;
+            }
+
+            // Check again if playlist was switched during fetch
+            if (backgroundFetchAborted || !playlist[index] || playlist[index].uuid !== songUuid) {
+                return;
             }
 
             // Mark as loaded and track failure state
@@ -2508,7 +2558,11 @@
             if (titleEl) titleEl.textContent = song.title;
             if (artistEl) artistEl.textContent = song.artist;
             if (thumbEl && song.coverUrl) {
-                thumbEl.innerHTML = `<img src="${song.coverUrl}" alt="">`;
+                // Only update image if src changed to avoid aborting in-progress loads
+                const existingImg = thumbEl.querySelector('img');
+                if (!existingImg || existingImg.src !== song.coverUrl) {
+                    thumbEl.innerHTML = `<img src="${song.coverUrl}" alt="">`;
+                }
             }
 
             // Show/hide warning icon based on fetch status
@@ -2527,17 +2581,25 @@
             document.getElementById('miniArtist').textContent = song.artist;
             document.title = `${song.title} - Suno Playlist Player`;
 
-            // Update cover art if available
+            // Update cover art if available and changed
             if (song.coverUrl) {
                 const artEl = document.getElementById('nowPlayingArt');
                 const bgEl = document.getElementById('mainContentBg');
                 const miniImg = document.getElementById('miniThumbImg');
 
-                artEl.innerHTML = `<img src="${song.coverUrl}" alt="">`;
-                bgEl.style.backgroundImage = `url(${song.coverUrl})`;
-                bgEl.classList.add('visible');
-                miniImg.src = song.coverUrl;
-                miniImg.style.display = 'block';
+                // Only update if src changed to avoid aborting in-progress loads
+                const existingArtImg = artEl.querySelector('img');
+                if (!existingArtImg || existingArtImg.src !== song.coverUrl) {
+                    artEl.innerHTML = `<img src="${song.coverUrl}" alt="">`;
+                }
+                if (bgEl.style.backgroundImage !== `url(${song.coverUrl})`) {
+                    bgEl.style.backgroundImage = `url(${song.coverUrl})`;
+                    bgEl.classList.add('visible');
+                }
+                if (miniImg.src !== song.coverUrl) {
+                    miniImg.src = song.coverUrl;
+                    miniImg.style.display = 'block';
+                }
             }
         }
 
@@ -2713,9 +2775,15 @@
             const bgEl = document.getElementById('mainContentBg');
 
             if (song.coverUrl) {
-                artEl.innerHTML = `<img src="${song.coverUrl}" alt="">`;
-                bgEl.style.backgroundImage = `url(${song.coverUrl})`;
-                bgEl.classList.add('visible');
+                // Only update if src changed to avoid aborting in-progress loads
+                const existingImg = artEl.querySelector('img');
+                if (!existingImg || existingImg.src !== song.coverUrl) {
+                    artEl.innerHTML = `<img src="${song.coverUrl}" alt="">`;
+                }
+                if (bgEl.style.backgroundImage !== `url(${song.coverUrl})`) {
+                    bgEl.style.backgroundImage = `url(${song.coverUrl})`;
+                    bgEl.classList.add('visible');
+                }
             } else {
                 artEl.innerHTML = '<span class="placeholder">♫</span>';
                 bgEl.classList.remove('visible');
@@ -3117,7 +3185,10 @@
             document.getElementById('miniArtist').textContent = song.artist;
             const miniImg = document.getElementById('miniThumbImg');
             if (song.coverUrl) {
-                miniImg.src = song.coverUrl;
+                // Only update if src changed to avoid aborting in-progress loads
+                if (miniImg.src !== song.coverUrl) {
+                    miniImg.src = song.coverUrl;
+                }
                 miniImg.style.display = 'block';
             } else {
                 miniImg.style.display = 'none';
