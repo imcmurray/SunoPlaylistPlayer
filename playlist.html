@@ -393,6 +393,258 @@
             background: rgba(102, 126, 234, 0.1);
         }
 
+        /* GitHub Sync Button */
+        .sync-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .sync-btn:hover {
+            border-color: #22c55e;
+            color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .sync-btn.syncing svg {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Sync Modal */
+        .sync-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sync-modal-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sync-modal {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow: auto;
+            border: 1px solid var(--border);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .sync-modal-overlay.visible .sync-modal {
+            transform: scale(1);
+        }
+
+        .sync-modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sync-modal-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sync-modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .sync-modal-close:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .sync-modal-body {
+            padding: 24px;
+        }
+
+        .sync-form-group {
+            margin-bottom: 20px;
+        }
+
+        .sync-form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .sync-form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .sync-form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .sync-form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .sync-form-group small {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .sync-form-group small a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .sync-form-group small a:hover {
+            text-decoration: underline;
+        }
+
+        .sync-stats {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .sync-stats h4 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .sync-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .sync-stat {
+            text-align: center;
+        }
+
+        .sync-stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .sync-stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .sync-status {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .sync-status.info {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: var(--accent-light);
+        }
+
+        .sync-status.success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+
+        .sync-status.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+
+        .sync-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .sync-btn-primary {
+            flex: 1;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .sync-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
+        }
+
+        .sync-btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .sync-btn-secondary {
+            padding: 14px 24px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sync-btn-secondary:hover {
+            background: var(--bg-hover, #2a2a35);
+            border-color: var(--accent);
+        }
+
         .song-list {
             flex: 1;
             overflow-y: auto;
@@ -1392,6 +1644,9 @@
                     <p id="playlistCount">0 songs</p>
                     <p id="playlistDescription" class="playlist-description"></p>
                 </div>
+                <button class="sync-btn" onclick="openSyncModal()" id="syncBtn" title="Sync to Hugo Site">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                </button>
             </div>
             <div class="song-list" id="songList">
                 <!-- Songs populated by JS -->
@@ -1546,6 +1801,7 @@
 
         // Creator/playlist state
         let currentPlaylistId = null;
+        let currentPlaylistUrl = null;
         let creatorUsername = null;
         let selectedArtist = null;
 
@@ -1805,6 +2061,7 @@
             currentIndex = 0;
             isPlaying = false;
             currentPlaylistId = null;
+            currentPlaylistUrl = null;
             creatorUsername = null;
             selectedArtist = null;
 
@@ -1876,8 +2133,9 @@
                 // Show songs being discovered in loading screen
                 showDiscoveredSongs(playlist);
 
-                // Store playlist ID and creator info
+                // Store playlist ID, URL, and creator info
                 currentPlaylistId = data.playlistId;
+                currentPlaylistUrl = url;
                 creatorUsername = data.creatorUsername;
 
                 // Set playlist title and description
@@ -1945,6 +2203,7 @@
                 saveToRecentPlaylists({
                     url: url,
                     title: data.playlistTitle || 'Playlist',
+                    description: data.playlistDescription || '',
                     author: playlist[0]?.artist || 'Unknown',
                     songCount: playlist.length,
                     coverUrl: playlist[0]?.coverUrl || null,
@@ -3291,6 +3550,7 @@
             currentIndex = 0;
             isPlaying = false;
             currentPlaylistId = null;
+            currentPlaylistUrl = null;
             creatorUsername = null;
             selectedArtist = null;
 
@@ -3343,6 +3603,350 @@
             }
         });
 
+        // =====================
+        // GitHub Sync Feature
+        // =====================
+        const GITHUB_CONFIG_KEY = 'sunoGitHubConfig';
+
+        function getGitHubConfig() {
+            try {
+                return JSON.parse(localStorage.getItem(GITHUB_CONFIG_KEY) || '{}');
+            } catch {
+                return {};
+            }
+        }
+
+        function saveGitHubConfig(config) {
+            localStorage.setItem(GITHUB_CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function openSyncModal() {
+            const modal = document.getElementById('syncModalOverlay');
+            const config = getGitHubConfig();
+
+            // Populate form with saved values
+            document.getElementById('githubToken').value = config.token || '';
+            document.getElementById('githubRepo').value = config.repo || '';
+
+            // Update stats
+            updateSyncStats();
+
+            // Clear status
+            document.getElementById('syncStatus').style.display = 'none';
+
+            modal.classList.add('visible');
+        }
+
+        function closeSyncModal() {
+            document.getElementById('syncModalOverlay').classList.remove('visible');
+        }
+
+        function updateSyncStats() {
+            const songCache = JSON.parse(localStorage.getItem(SONG_CACHE_KEY) || '{}');
+            const playlistsCache = JSON.parse(localStorage.getItem(RECENT_PLAYLISTS_KEY) || '[]');
+
+            document.getElementById('syncSongCount').textContent = Object.keys(songCache).length;
+            document.getElementById('syncPlaylistCount').textContent = playlistsCache.length;
+        }
+
+        function showSyncStatus(message, type) {
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.textContent = message;
+            statusEl.className = 'sync-status ' + type;
+            statusEl.style.display = 'block';
+        }
+
+        async function performSync() {
+            const token = document.getElementById('githubToken').value.trim();
+            const repo = document.getElementById('githubRepo').value.trim();
+
+            if (!token || !repo) {
+                showSyncStatus('Please enter both GitHub token and repository name.', 'error');
+                return;
+            }
+
+            // Validate repo format
+            if (!repo.includes('/')) {
+                showSyncStatus('Repository should be in format: username/repo-name', 'error');
+                return;
+            }
+
+            // Save config
+            saveGitHubConfig({ token, repo });
+
+            const syncBtn = document.getElementById('performSyncBtn');
+            const headerSyncBtn = document.getElementById('syncBtn');
+            syncBtn.disabled = true;
+            syncBtn.innerHTML = '<svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Syncing...';
+            headerSyncBtn.classList.add('syncing');
+
+            try {
+                showSyncStatus('Fetching existing data from GitHub...', 'info');
+
+                // Get current song cache and playlists
+                const localSongs = JSON.parse(localStorage.getItem(SONG_CACHE_KEY) || '{}');
+                const localPlaylists = JSON.parse(localStorage.getItem(RECENT_PLAYLISTS_KEY) || '[]');
+
+                // Fetch existing data from repo
+                let existingSongs = {};
+                let existingPlaylists = {};
+
+                try {
+                    const songsResponse = await fetch(`https://api.github.com/repos/${repo}/contents/data/songs.json`, {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+                    if (songsResponse.ok) {
+                        const data = await songsResponse.json();
+                        existingSongs = JSON.parse(atob(data.content));
+                    }
+                } catch (e) {
+                    console.log('No existing songs.json or error fetching:', e);
+                }
+
+                try {
+                    const playlistsResponse = await fetch(`https://api.github.com/repos/${repo}/contents/data/playlists.json`, {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+                    if (playlistsResponse.ok) {
+                        const data = await playlistsResponse.json();
+                        existingPlaylists = JSON.parse(atob(data.content));
+                    }
+                } catch (e) {
+                    console.log('No existing playlists.json or error fetching:', e);
+                }
+
+                showSyncStatus('Merging data...', 'info');
+
+                // Merge songs (local overwrites existing for same UUID)
+                const mergedSongs = { ...existingSongs };
+                for (const [uuid, songData] of Object.entries(localSongs)) {
+                    mergedSongs[uuid] = {
+                        title: songData.title,
+                        artist: songData.artist,
+                        coverUrl: songData.coverUrl,
+                        style: songData.style || '',
+                        description: songData.description || '',
+                        addedAt: songData.timestamp || Date.now()
+                    };
+                }
+
+                // Convert playlists to keyed format and merge
+                const mergedPlaylists = { ...existingPlaylists };
+                for (const pl of localPlaylists) {
+                    // Extract playlist ID from URL
+                    const urlMatch = pl.url.match(/playlist\/([a-f0-9-]+)/i);
+                    if (urlMatch) {
+                        const playlistId = urlMatch[1];
+                        // Get song UUIDs for this playlist from current playlist if it matches
+                        let songUuids = mergedPlaylists[playlistId]?.songs || [];
+
+                        // If this is the currently loaded playlist, use its songs
+                        if (currentPlaylistId === playlistId && playlist.length > 0) {
+                            songUuids = playlist.map(s => s.uuid);
+                        }
+
+                        mergedPlaylists[playlistId] = {
+                            title: pl.title,
+                            description: pl.description || '',
+                            creator: pl.author,
+                            coverUrl: pl.coverUrl,
+                            url: pl.url,
+                            songs: songUuids,
+                            addedAt: pl.timestamp || Date.now()
+                        };
+                    }
+                }
+
+                // Also add current playlist if loaded
+                if (currentPlaylistId && playlist.length > 0) {
+                    mergedPlaylists[currentPlaylistId] = {
+                        title: document.getElementById('playlistTitle').textContent,
+                        description: document.getElementById('playlistDescription').textContent || '',
+                        creator: creatorUsername,
+                        coverUrl: playlist[0]?.coverUrl || null,
+                        url: currentPlaylistUrl,
+                        songs: playlist.map(s => s.uuid),
+                        addedAt: Date.now()
+                    };
+                }
+
+                showSyncStatus('Uploading to GitHub...', 'info');
+
+                // Get current file SHAs for update
+                let songsSha = null;
+                let playlistsSha = null;
+
+                try {
+                    const resp = await fetch(`https://api.github.com/repos/${repo}/contents/data/songs.json`, {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        songsSha = data.sha;
+                    }
+                } catch (e) {}
+
+                try {
+                    const resp = await fetch(`https://api.github.com/repos/${repo}/contents/data/playlists.json`, {
+                        headers: { 'Authorization': `token ${token}` }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        playlistsSha = data.sha;
+                    }
+                } catch (e) {}
+
+                // Create content index files for playlists
+                const playlistIndexContent = Object.keys(mergedPlaylists).map(id =>
+                    `---\ntitle: "${mergedPlaylists[id].title.replace(/"/g, '\\"')}"\n---\n`
+                );
+
+                // Upload songs.json
+                const songsContent = btoa(unescape(encodeURIComponent(JSON.stringify(mergedSongs, null, 2))));
+                await fetch(`https://api.github.com/repos/${repo}/contents/data/songs.json`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Sync ${Object.keys(mergedSongs).length} songs from Suno Player`,
+                        content: songsContent,
+                        sha: songsSha
+                    })
+                });
+
+                // Upload playlists.json
+                const playlistsContent = btoa(unescape(encodeURIComponent(JSON.stringify(mergedPlaylists, null, 2))));
+                await fetch(`https://api.github.com/repos/${repo}/contents/data/playlists.json`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Sync ${Object.keys(mergedPlaylists).length} playlists from Suno Player`,
+                        content: playlistsContent,
+                        sha: playlistsSha
+                    })
+                });
+
+                // Create playlist content files
+                for (const [id, pl] of Object.entries(mergedPlaylists)) {
+                    const mdContent = `---\ntitle: "${pl.title.replace(/"/g, '\\"')}"\n---\n`;
+                    const mdContentB64 = btoa(unescape(encodeURIComponent(mdContent)));
+
+                    let existingSha = null;
+                    try {
+                        const resp = await fetch(`https://api.github.com/repos/${repo}/contents/content/playlists/${id}.md`, {
+                            headers: { 'Authorization': `token ${token}` }
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            existingSha = data.sha;
+                        }
+                    } catch (e) {}
+
+                    await fetch(`https://api.github.com/repos/${repo}/contents/content/playlists/${id}.md`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `token ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            message: `Add/update playlist: ${pl.title}`,
+                            content: mdContentB64,
+                            sha: existingSha
+                        })
+                    });
+                }
+
+                const songCount = Object.keys(mergedSongs).length;
+                const playlistCount = Object.keys(mergedPlaylists).length;
+                showSyncStatus(`Successfully synced ${songCount} songs and ${playlistCount} playlists! GitHub Actions will rebuild your site.`, 'success');
+
+            } catch (error) {
+                console.error('Sync error:', error);
+                showSyncStatus(`Sync failed: ${error.message}`, 'error');
+            } finally {
+                syncBtn.disabled = false;
+                syncBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Sync Now';
+                headerSyncBtn.classList.remove('syncing');
+            }
+        }
+
+        // Close modal on overlay click
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'syncModalOverlay') {
+                closeSyncModal();
+            }
+        });
+
+        // Close modal on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeSyncModal();
+            }
+        });
+
     </script>
+
+    <!-- Sync Modal -->
+    <div class="sync-modal-overlay" id="syncModalOverlay">
+        <div class="sync-modal">
+            <div class="sync-modal-header">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    Sync to Hugo Site
+                </h3>
+                <button class="sync-modal-close" onclick="closeSyncModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="sync-modal-body">
+                <div class="sync-stats">
+                    <h4>Cached Data Ready to Sync</h4>
+                    <div class="sync-stats-grid">
+                        <div class="sync-stat">
+                            <div class="sync-stat-value" id="syncSongCount">0</div>
+                            <div class="sync-stat-label">Songs</div>
+                        </div>
+                        <div class="sync-stat">
+                            <div class="sync-stat-value" id="syncPlaylistCount">0</div>
+                            <div class="sync-stat-label">Playlists</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sync-form-group">
+                    <label for="githubToken">GitHub Personal Access Token</label>
+                    <input type="password" id="githubToken" placeholder="ghp_xxxxxxxxxxxx">
+                    <small>
+                        Need a token? <a href="https://github.com/settings/tokens/new?description=Suno%20Music%20Library&scopes=repo" target="_blank">Create one here</a> with 'repo' scope.
+                        <br>Your token is stored locally and never sent to any server except GitHub.
+                    </small>
+                </div>
+
+                <div class="sync-form-group">
+                    <label for="githubRepo">Repository (username/repo-name)</label>
+                    <input type="text" id="githubRepo" placeholder="yourname/suno-music-library">
+                    <small>
+                        The repository should contain the Hugo site structure.
+                        <a href="https://github.com/new" target="_blank">Create a new repo</a> if needed.
+                    </small>
+                </div>
+
+                <div class="sync-status" id="syncStatus" style="display: none;"></div>
+
+                <div class="sync-actions">
+                    <button class="sync-btn-primary" id="performSyncBtn" onclick="performSync()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                        Sync Now
+                    </button>
+                    <button class="sync-btn-secondary" onclick="closeSyncModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

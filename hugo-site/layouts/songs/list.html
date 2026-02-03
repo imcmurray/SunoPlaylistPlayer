@@ -1,0 +1,108 @@
+{{ define "main" }}
+<div class="songs-page">
+    <header class="page-header">
+        <h1>All Songs</h1>
+        {{ $songs := (index .Site.Data "songs") | default dict }}
+        <p class="page-subtitle">{{ len $songs }} songs in your library</p>
+    </header>
+
+    {{ $songs := (index .Site.Data "songs") | default dict }}
+    {{ if $songs }}
+    <div class="songs-controls">
+        <div class="search-box">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <input type="text" id="song-search" placeholder="Search songs..." class="search-input">
+        </div>
+        <div class="sort-controls">
+            <label for="sort-by">Sort by:</label>
+            <select id="sort-by" class="sort-select">
+                <option value="title">Title</option>
+                <option value="artist">Artist</option>
+                <option value="recent">Recently Added</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="song-list" id="all-songs">
+        {{ range $uuid, $song := $songs }}
+        <div class="song-row" data-uuid="{{ $uuid }}" data-title="{{ $song.title }}" data-artist="{{ $song.artist }}" data-cover="{{ $song.coverUrl }}" data-added="{{ $song.addedAt }}" data-style="{{ $song.style }}">
+            <div class="song-cover-wrap">
+                {{ if $song.coverUrl }}
+                <img src="{{ $song.coverUrl }}" alt="{{ $song.title }}" class="song-cover" loading="lazy">
+                {{ else }}
+                <div class="song-cover placeholder"></div>
+                {{ end }}
+                <button class="song-play-btn" title="Play">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+                </button>
+            </div>
+            <div class="song-info">
+                <span class="song-title">{{ $song.title }}</span>
+                <span class="song-artist">{{ $song.artist }}</span>
+                {{ with $song.style }}<span class="song-style">{{ . }}</span>{{ end }}
+            </div>
+            <div class="song-actions">
+                <a href="https://suno.com/song/{{ $uuid }}" target="_blank" rel="noopener" class="external-link" title="View on Suno">
+                    <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+                </a>
+            </div>
+        </div>
+        {{ end }}
+    </div>
+    {{ else }}
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" width="64" height="64"><path fill="currentColor" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        <h2>No songs yet</h2>
+        <p>Sync your music from the Suno Playlist Player to see it here.</p>
+    </div>
+    {{ end }}
+</div>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+// Search and sort functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('song-search');
+    const sortSelect = document.getElementById('sort-by');
+    const songList = document.getElementById('all-songs');
+
+    if (!songList) return;
+
+    const songs = Array.from(songList.querySelectorAll('.song-row'));
+
+    function filterAndSort() {
+        const query = searchInput.value.toLowerCase();
+        const sortBy = sortSelect.value;
+
+        // Filter
+        songs.forEach(song => {
+            const title = song.dataset.title.toLowerCase();
+            const artist = song.dataset.artist.toLowerCase();
+            const style = (song.dataset.style || '').toLowerCase();
+            const matches = title.includes(query) || artist.includes(query) || style.includes(query);
+            song.style.display = matches ? '' : 'none';
+        });
+
+        // Sort visible songs
+        const visible = songs.filter(s => s.style.display !== 'none');
+        visible.sort((a, b) => {
+            if (sortBy === 'title') {
+                return a.dataset.title.localeCompare(b.dataset.title);
+            } else if (sortBy === 'artist') {
+                return a.dataset.artist.localeCompare(b.dataset.artist);
+            } else if (sortBy === 'recent') {
+                return (b.dataset.added || 0) - (a.dataset.added || 0);
+            }
+            return 0;
+        });
+
+        // Reorder in DOM
+        visible.forEach(song => songList.appendChild(song));
+    }
+
+    searchInput.addEventListener('input', filterAndSort);
+    sortSelect.addEventListener('change', filterAndSort);
+});
+</script>
+{{ end }}
