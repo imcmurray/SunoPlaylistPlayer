@@ -161,9 +161,17 @@ async function fetchPlaylistSongs(playlistUrl) {
                 if (match) creatorUsername = match[1];
             }
 
+            // Extract playlist description (line-clamp-3 span)
+            let playlistDescription = '';
+            const descEl = document.querySelector('span.line-clamp-3');
+            if (descEl) {
+                playlistDescription = descEl.textContent.trim();
+            }
+
             return {
                 playlistId: plId,
                 playlistTitle: titleEl ? titleEl.textContent.trim() : 'Unknown Playlist',
+                playlistDescription,
                 creatorUsername,
                 songs
             };
@@ -193,6 +201,8 @@ async function fetchSongInfo(uuid) {
         const html = await response.text();
 
         // Check for __NEXT_DATA__ which contains server-rendered data
+        let songStyle = '';
+        let songDescription = '';
         const nextDataMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/i);
         if (nextDataMatch) {
             try {
@@ -210,6 +220,18 @@ async function fetchSongInfo(uuid) {
                         user_display_name: clip.user_display_name,
                         created_by: clip.created_by
                     });
+
+                    // Extract style from metadata.tags (comma-separated string)
+                    if (clip.metadata?.tags) {
+                        songStyle = clip.metadata.tags;
+                        console.log(`[${uuid}] Style from metadata.tags: "${songStyle.substring(0, 100)}..."`);
+                    }
+
+                    // Extract description/prompt from metadata.prompt
+                    if (clip.metadata?.prompt) {
+                        songDescription = clip.metadata.prompt;
+                        console.log(`[${uuid}] Description from metadata.prompt: "${songDescription.substring(0, 100)}..."`);
+                    }
                 } else {
                     console.log(`[${uuid}] No clip in pageProps. Available:`, Object.keys(pageProps).join(', ') || '(empty)');
                     // Log first level of any object that might contain song data
@@ -280,8 +302,8 @@ async function fetchSongInfo(uuid) {
 
         if (!artist) artist = 'Suno AI';
 
-        console.log(`[${uuid}] Final result: title="${title}", artist="${artist}"`);
-        return { title, artist, coverUrl };
+        console.log(`[${uuid}] Final result: title="${title}", artist="${artist}", style="${songStyle ? 'yes' : 'no'}", desc="${songDescription ? 'yes' : 'no'}"`);
+        return { title, artist, coverUrl, style: songStyle, description: songDescription };
     } catch (e) {
         if (!e.message.includes('timeout')) {
             console.error('Error fetching song info:', e.message);
@@ -289,7 +311,9 @@ async function fetchSongInfo(uuid) {
         return {
             title: '',
             artist: '',
-            coverUrl: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`
+            coverUrl: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`,
+            style: '',
+            description: ''
         };
     }
 }
@@ -636,7 +660,9 @@ async function fetchSongInfoBatch(uuids) {
             results[uuid] = {
                 title: '',
                 artist: '',
-                coverUrl: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`
+                coverUrl: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`,
+                style: '',
+                description: ''
             };
         }
     });
@@ -733,28 +759,93 @@ const server = http.createServer(async (req, res) => {
                 for (const uuid of uuids) {
                     let page;
                     let artist = 'Suno AI';
+                    let style = '';
+                    let description = '';
                     try {
                         page = await browser.newPage();
                         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
                         await page.goto(`https://suno.com/song/${uuid}`, {
-                            waitUntil: 'domcontentloaded',
+                            waitUntil: 'networkidle2',
                             timeout: 30000
                         });
 
+                        // Wait for artist link to appear (indicates page has loaded)
                         try {
                             await page.waitForSelector('a[href^="/@"]', { timeout: 10000 });
                         } catch (e) {
                             // Selector not found, continue anyway
                         }
 
-                        const foundArtist = await page.evaluate(() => {
+                        // Give a bit more time for dynamic content to render
+                        await new Promise(r => setTimeout(r, 500));
+
+                        const songData = await page.evaluate(() => {
+                            // Get artist
                             const artistLink = document.querySelector('a[href^="/@"]');
-                            return artistLink ? artistLink.textContent.trim() : null;
+                            const artist = artistLink ? artistLink.textContent.trim() : null;
+
+                            // Get style - try multiple approaches
+                            let style = '';
+
+                            // Method 1: Look for div with title attribute containing style info (near "Show Summary" text)
+                            const allDivs = document.querySelectorAll('div[title]');
+                            for (const div of allDivs) {
+                                const title = div.getAttribute('title');
+                                // Style titles are usually comma-separated genre/mood descriptions
+                                if (title && title.includes(',') && title.length > 20 && title.length < 2000) {
+                                    // Check if it looks like style tags (has musical terms)
+                                    if (/pop|rock|jazz|electronic|vocal|piano|guitar|beat|melody|synth|drum/i.test(title)) {
+                                        style = title;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // Method 2: Look for the specific style div structure
+                            if (!style) {
+                                const styleContainer = document.querySelector('div.my-2 div.relative');
+                                if (styleContainer) {
+                                    const innerDiv = styleContainer.querySelector('div[title]');
+                                    if (innerDiv) {
+                                        style = innerDiv.getAttribute('title') || innerDiv.textContent.trim();
+                                    }
+                                }
+                            }
+
+                            // Get description - the text content of the song
+                            let description = '';
+
+                            // Method 1: Look for the description span with "More"/"Less" button nearby
+                            const descSpans = document.querySelectorAll('div span');
+                            for (const span of descSpans) {
+                                const text = span.textContent.trim();
+                                // Description is usually a longer text (not just a label)
+                                if (text.length > 50 && text.length < 3000) {
+                                    // Check if parent has a "More" or "Less" button (indicates it's the description)
+                                    const parent = span.parentElement;
+                                    if (parent && (parent.innerHTML.includes('Less') || parent.innerHTML.includes('More'))) {
+                                        description = text;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // Method 2: Look for description by structure (whitespace-normal class)
+                            if (!description) {
+                                const descDiv = document.querySelector('div[class*="whitespace-normal"] > span');
+                                if (descDiv && descDiv.textContent.length > 30) {
+                                    description = descDiv.textContent.trim();
+                                }
+                            }
+
+                            return { artist, style, description };
                         });
 
-                        if (foundArtist) artist = foundArtist;
-                        console.log(`[Puppeteer] ${uuid}: artist = "${artist}"`);
+                        if (songData.artist) artist = songData.artist;
+                        if (songData.style) style = songData.style;
+                        if (songData.description) description = songData.description;
+                        console.log(`[Puppeteer] ${uuid}: artist="${artist}", style=${style ? 'yes' : 'no'}, desc=${description ? 'yes' : 'no'}`);
 
                     } catch (e) {
                         console.log(`[Puppeteer] ${uuid}: error - ${e.message}`);
@@ -763,7 +854,7 @@ const server = http.createServer(async (req, res) => {
                     }
 
                     // Send this result immediately
-                    res.write(`data: ${JSON.stringify({ uuid, artist })}\n\n`);
+                    res.write(`data: ${JSON.stringify({ uuid, artist, style, description })}\n\n`);
                 }
 
                 // Send done event
