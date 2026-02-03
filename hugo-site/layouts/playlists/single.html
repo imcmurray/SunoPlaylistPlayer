@@ -22,6 +22,9 @@
                     {{ with $playlist.creator }}<span class="creator">{{ . }}</span> &bull; {{ end }}
                     <span>{{ len $playlist.songs }} songs</span>
                 </p>
+                {{ with $playlist.description }}
+                <p class="playlist-description">{{ . }}</p>
+                {{ end }}
                 <div class="playlist-actions">
                     <button class="btn btn-primary play-all-btn" data-playlist="{{ $playlistId }}">
                         <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
@@ -62,6 +65,7 @@
                 <div class="song-info">
                     <span class="song-title">{{ $song.title }}</span>
                     <span class="song-artist">{{ $song.artist }}</span>
+                    {{ with $song.style }}<span class="song-style">{{ . }}</span>{{ end }}
                 </div>
                 <div class="song-actions">
                     <a href="https://suno.com/song/{{ $uuid }}" target="_blank" rel="noopener" class="external-link" title="View on Suno">

@@ -25,7 +25,7 @@
 
     <div class="song-list" id="all-songs">
         {{ range $uuid, $song := $songs }}
-        <div class="song-row" data-uuid="{{ $uuid }}" data-title="{{ $song.title }}" data-artist="{{ $song.artist }}" data-cover="{{ $song.coverUrl }}" data-added="{{ $song.addedAt }}">
+        <div class="song-row" data-uuid="{{ $uuid }}" data-title="{{ $song.title }}" data-artist="{{ $song.artist }}" data-cover="{{ $song.coverUrl }}" data-added="{{ $song.addedAt }}" data-style="{{ $song.style }}">
             <div class="song-cover-wrap">
                 {{ if $song.coverUrl }}
                 <img src="{{ $song.coverUrl }}" alt="{{ $song.title }}" class="song-cover" loading="lazy">
@@ -39,6 +39,7 @@
             <div class="song-info">
                 <span class="song-title">{{ $song.title }}</span>
                 <span class="song-artist">{{ $song.artist }}</span>
+                {{ with $song.style }}<span class="song-style">{{ . }}</span>{{ end }}
             </div>
             <div class="song-actions">
                 <a href="https://suno.com/song/{{ $uuid }}" target="_blank" rel="noopener" class="external-link" title="View on Suno">
@@ -78,7 +79,8 @@ document.addEventListener('DOMContentLoaded', function() {
         songs.forEach(song => {
             const title = song.dataset.title.toLowerCase();
             const artist = song.dataset.artist.toLowerCase();
-            const matches = title.includes(query) || artist.includes(query);
+            const style = (song.dataset.style || '').toLowerCase();
+            const matches = title.includes(query) || artist.includes(query) || style.includes(query);
             song.style.display = matches ? '' : 'none';
         });
 

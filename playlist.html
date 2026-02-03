@@ -2203,6 +2203,7 @@
                 saveToRecentPlaylists({
                     url: url,
                     title: data.playlistTitle || 'Playlist',
+                    description: data.playlistDescription || '',
                     author: playlist[0]?.artist || 'Unknown',
                     songCount: playlist.length,
                     coverUrl: playlist[0]?.coverUrl || null,
@@ -3723,6 +3724,8 @@
                         title: songData.title,
                         artist: songData.artist,
                         coverUrl: songData.coverUrl,
+                        style: songData.style || '',
+                        description: songData.description || '',
                         addedAt: songData.timestamp || Date.now()
                     };
                 }
@@ -3744,6 +3747,7 @@
 
                         mergedPlaylists[playlistId] = {
                             title: pl.title,
+                            description: pl.description || '',
                             creator: pl.author,
                             coverUrl: pl.coverUrl,
                             url: pl.url,
@@ -3757,6 +3761,7 @@
                 if (currentPlaylistId && playlist.length > 0) {
                     mergedPlaylists[currentPlaylistId] = {
                         title: document.getElementById('playlistTitle').textContent,
+                        description: document.getElementById('playlistDescription').textContent || '',
                         creator: creatorUsername,
                         coverUrl: playlist[0]?.coverUrl || null,
                         url: currentPlaylistUrl,

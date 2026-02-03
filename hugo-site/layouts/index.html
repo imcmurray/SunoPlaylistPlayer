@@ -59,6 +59,7 @@
                 <div class="song-info">
                     <span class="song-title">{{ $song.title }}</span>
                     <span class="song-artist">{{ $song.artist }}</span>
+                    {{ with $song.style }}<span class="song-style">{{ . }}</span>{{ end }}
                 </div>
                 <div class="song-actions">
                     <a href="https://suno.com/song/{{ $uuid }}" target="_blank" rel="noopener" class="external-link" title="View on Suno">
