@@ -58,7 +58,10 @@ jobs:
           HUGO_ENVIRONMENT: production
           HUGO_ENV: production
         run: |
-          hugo --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
+          REPO_NAME="${{ github.repository }}"
+          OWNER="${REPO_NAME%%/*}"
+          REPO="${REPO_NAME##*/}"
+          hugo --minify --baseURL "https://${OWNER}.github.io/${REPO}/"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
