@@ -8,7 +8,7 @@
     {{ if $playlists }}
     <div class="playlist-grid">
         {{ range $id, $playlist := $playlists }}
-        <a href="{{ printf "/playlists/%s/" $id | relURL }}" class="playlist-card">
+        <a href="{{ printf "/playlists/%s/" $id | absURL }}" class="playlist-card">
             <div class="playlist-cover-wrap">
                 {{ if $playlist.coverUrl }}
                 <img src="{{ $playlist.coverUrl }}" alt="{{ $playlist.title }}" class="playlist-cover" loading="lazy">

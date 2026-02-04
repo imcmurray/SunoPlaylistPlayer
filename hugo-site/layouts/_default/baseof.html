@@ -73,6 +73,11 @@
             {{ $playlists := (index .Site.Data "playlists") | default dict }}
             <span>{{ len $songs }} songs</span> &bull; <span>{{ len $playlists }} playlists</span>
         </p>
+        {{ with .Site.Data.build }}
+        <p class="build-info">
+            <a href="https://github.com/imcmurray/suno-music-library/commit/{{ .commit }}" target="_blank" rel="noopener">{{ .shortCommit }}</a> &bull; {{ .buildTime }}
+        </p>
+        {{ end }}
     </footer>
 
     <script src="{{ "js/player.js" | relURL }}"></script>
