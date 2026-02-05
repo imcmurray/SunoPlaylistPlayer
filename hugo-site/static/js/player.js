@@ -137,11 +137,6 @@
 
         const audioUrl = `${AUDIO_CDN}/${song.uuid}.m4a`;
 
-        // Reset progress bar and time immediately
-        progressBar.value = 0;
-        currentTimeEl.textContent = '0:00';
-        durationEl.textContent = '0:00';
-
         audio.src = audioUrl;
         audio.play().catch(err => {
             console.error('Playback failed:', err);
@@ -155,7 +150,6 @@
             playerCover.src = song.coverUrl;
             playerCover.style.display = '';
         } else {
-            playerCover.removeAttribute('src');
             playerCover.style.display = 'none';
         }
 

@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3003;
 
 // Puppeteer launch options (environment-aware)
 const getPuppeteerOptions = () => {
@@ -675,6 +675,13 @@ async function fetchSongInfoBatch(uuids) {
 const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
 
+    // Ignore favicon requests
+    if (url.pathname === '/favicon.ico') {
+        res.writeHead(204);
+        res.end();
+        return;
+    }
+
     // API endpoint to fetch song info (single)
     if (url.pathname === '/api/fetch-song-info' && req.method === 'GET') {
         const uuid = url.searchParams.get('uuid');
@@ -758,9 +765,10 @@ const server = http.createServer(async (req, res) => {
 
                 for (const uuid of uuids) {
                     let page;
-                    let artist = 'Suno AI';
+                    let artist = '';
                     let style = '';
                     let description = '';
+                    let lyrics = '';
                     try {
                         page = await browser.newPage();
                         await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
@@ -781,21 +789,38 @@ const server = http.createServer(async (req, res) => {
                         await new Promise(r => setTimeout(r, 500));
 
                         const songData = await page.evaluate(() => {
-                            // Get artist
+                            // Get artist - try multiple approaches
+                            let artist = null;
+
+                            // Method 1: Look for link starting with /@
                             const artistLink = document.querySelector('a[href^="/@"]');
-                            const artist = artistLink ? artistLink.textContent.trim() : null;
+                            if (artistLink) {
+                                artist = artistLink.textContent.trim();
+                            }
+
+                            // Method 2: Look for link containing /profile/ or similar patterns
+                            if (!artist) {
+                                const profileLinks = document.querySelectorAll('a[href*="/profile"], a[href*="/@"]');
+                                for (const link of profileLinks) {
+                                    const text = link.textContent.trim();
+                                    if (text && text.length > 0 && text.length < 50 && !text.includes('http')) {
+                                        artist = text;
+                                        break;
+                                    }
+                                }
+                            }
 
                             // Get style - try multiple approaches
                             let style = '';
 
-                            // Method 1: Look for div with title attribute containing style info (near "Show Summary" text)
+                            // Method 1: Look for div with title attribute containing style info
                             const allDivs = document.querySelectorAll('div[title]');
                             for (const div of allDivs) {
                                 const title = div.getAttribute('title');
                                 // Style titles are usually comma-separated genre/mood descriptions
                                 if (title && title.includes(',') && title.length > 20 && title.length < 2000) {
                                     // Check if it looks like style tags (has musical terms)
-                                    if (/pop|rock|jazz|electronic|vocal|piano|guitar|beat|melody|synth|drum/i.test(title)) {
+                                    if (/pop|rock|jazz|electronic|vocal|piano|guitar|beat|melody|synth|drum|ambient|classical|hip.?hop|r&b|soul|funk|metal|indie|folk|country|blues|reggae|latin|world|orchestral|cinematic|epic|chill|lo.?fi|edm|house|techno|trance|dubstep|trap|acoustic|ballad|power|anthem|dance|disco|punk|grunge|alternative|experimental|psychedelic|progressive|retro|vintage|modern|contemporary|future|bass|synth|wave/i.test(title)) {
                                         style = title;
                                         break;
                                     }
@@ -809,6 +834,40 @@ const server = http.createServer(async (req, res) => {
                                     const innerDiv = styleContainer.querySelector('div[title]');
                                     if (innerDiv) {
                                         style = innerDiv.getAttribute('title') || innerDiv.textContent.trim();
+                                    }
+                                }
+                            }
+
+                            // Get lyrics - look for the container with the "Copy lyrics to clipboard" button
+                            let lyrics = '';
+
+                            // Method 1: Find the copy lyrics button and get sibling/parent content
+                            const copyLyricsBtn = document.querySelector('button[title="Copy lyrics to clipboard"], button[aria-label="Copy lyrics to clipboard"]');
+                            if (copyLyricsBtn) {
+                                // The lyrics are likely in a sibling element or parent container
+                                const container = copyLyricsBtn.closest('div.relative') || copyLyricsBtn.parentElement;
+                                if (container) {
+                                    // Look for text content in the container, excluding the button
+                                    const textElements = container.querySelectorAll('span, p, div');
+                                    for (const el of textElements) {
+                                        const text = el.textContent.trim();
+                                        // Lyrics typically have multiple lines and are substantial
+                                        if (text.length > 20 && text.includes('\n')) {
+                                            lyrics = text;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Method 2: Look for pre-formatted or whitespace-preserved text that looks like lyrics
+                            if (!lyrics) {
+                                const preElements = document.querySelectorAll('[class*="whitespace-pre"], [class*="pre-wrap"], [class*="pre-line"]');
+                                for (const el of preElements) {
+                                    const text = el.textContent.trim();
+                                    if (text.length > 50 && (text.includes('\n') || text.split(/[.!?]/).length > 3)) {
+                                        lyrics = text;
+                                        break;
                                     }
                                 }
                             }
@@ -839,13 +898,14 @@ const server = http.createServer(async (req, res) => {
                                 }
                             }
 
-                            return { artist, style, description };
+                            return { artist, style, description, lyrics };
                         });
 
                         if (songData.artist) artist = songData.artist;
                         if (songData.style) style = songData.style;
                         if (songData.description) description = songData.description;
-                        console.log(`[Puppeteer] ${uuid}: artist="${artist}", style=${style ? 'yes' : 'no'}, desc=${description ? 'yes' : 'no'}`);
+                        if (songData.lyrics) lyrics = songData.lyrics;
+                        console.log(`[Puppeteer] ${uuid}: artist="${artist || 'unknown'}", style=${style ? 'yes' : 'no'}, desc=${description ? 'yes' : 'no'}, lyrics=${lyrics ? 'yes' : 'no'}`);
 
                     } catch (e) {
                         console.log(`[Puppeteer] ${uuid}: error - ${e.message}`);
@@ -854,7 +914,7 @@ const server = http.createServer(async (req, res) => {
                     }
 
                     // Send this result immediately
-                    res.write(`data: ${JSON.stringify({ uuid, artist, style, description })}\n\n`);
+                    res.write(`data: ${JSON.stringify({ uuid, artist, style, description, lyrics })}\n\n`);
                 }
 
                 // Send done event

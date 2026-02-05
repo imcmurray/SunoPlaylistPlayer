@@ -784,7 +784,7 @@
         .main-content {
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: stretch;
             justify-content: center;
             padding: 48px;
             background: linear-gradient(180deg, var(--bg-tertiary) 0%, var(--bg-primary) 100%);
@@ -970,6 +970,15 @@
             gap: 12px;
         }
 
+        .volume-icon {
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .volume-icon:hover {
+            opacity: 0.7;
+        }
+
         .volume-slider {
             width: 100px;
             height: 4px;
@@ -1035,13 +1044,203 @@
             border-color: var(--accent);
         }
 
+        /* Lyrics Panel */
+        .lyrics-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .lyrics-toggle {
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .lyrics-toggle:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .lyrics-toggle.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .lyrics-toggle:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .lyrics-toggle:disabled:hover {
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+
+        /* Main content layout for lyrics */
+        .main-content-inner {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            transition: all 0.4s ease;
+            position: relative;
+            z-index: 2;
+            overflow: visible;
+        }
+
+        .main-content.lyrics-visible .main-content-inner {
+            justify-content: center;
+            gap: 48px;
+        }
+
+        .player-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            align-self: center;
+            transition: transform 0.4s ease;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+        .main-content.lyrics-visible .player-content {
+            transform: scale(0.9);
+            transform-origin: center right;
+        }
+
+        .lyrics-panel {
+            width: 0;
+            min-width: 0;
+            max-width: 0;
+            overflow: hidden;
+            transition: width 0.4s ease, min-width 0.4s ease, max-width 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .main-content.lyrics-visible .lyrics-panel {
+            width: 350px;
+            min-width: 350px;
+            max-width: 350px;
+        }
+
+        .lyrics-panel-inner {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 24px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .main-content.lyrics-visible .lyrics-panel-inner {
+            opacity: 1;
+            transition: opacity 0.3s ease 0.3s;
+        }
+
+        .lyrics-panel-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .lyrics-panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+        }
+
+        .lyrics-panel-close {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lyrics-panel-close:hover {
+            color: var(--text-primary);
+        }
+
+        .lyrics-content {
+            font-size: 14px;
+            line-height: 1.8;
+            flex: 1;
+            overflow-y: auto;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+        }
+
+        .lyrics-content.auto-scroll {
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+
+        .lyrics-content.auto-scroll::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+
+        .lyrics-content.no-lyrics {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding-top: 40px;
+        }
+
+        .lyrics-auto-scroll {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .lyrics-auto-scroll input {
+            cursor: pointer;
+            accent-color: var(--accent);
+        }
+
+        .lyrics-auto-scroll:hover {
+            color: var(--text-secondary);
+        }
+
         /* Crossfade visual containers */
         .now-playing-wrapper {
             position: relative;
             width: 320px;
             height: 320px;
+            min-width: 320px;
+            min-height: 320px;
             margin-bottom: 32px;
             perspective: 1000px;
+            flex-shrink: 0;
         }
 
         .now-playing-art {
@@ -1066,6 +1265,7 @@
 
         .now-playing-art.current {
             z-index: 2;
+            opacity: 1;
         }
 
         /* Dissolve transition */
@@ -1658,7 +1858,10 @@
             <div class="main-content-bg current" id="mainContentBg"></div>
             <div class="main-content-bg next" id="mainContentBgNext"></div>
 
-            <div class="now-playing-wrapper" id="nowPlayingWrapper">
+            <div class="main-content-inner">
+                <!-- Player Content -->
+                <div class="player-content">
+                    <div class="now-playing-wrapper" id="nowPlayingWrapper">
                 <div class="now-playing-art current" id="nowPlayingArt">
                     <span class="placeholder">♫</span>
                 </div>
@@ -1687,7 +1890,7 @@
             </div>
 
             <div class="progress-container">
-                <div class="progress-bar" id="progressBar" onclick="seek(event)">
+                <div class="progress-bar" id="progressBar" onclick="seek(event)" title="Click to seek">
                     <div class="progress-fill" id="progressFill"></div>
                 </div>
                 <div class="progress-times">
@@ -1697,30 +1900,30 @@
             </div>
 
             <div class="controls">
-                <button class="control-btn" onclick="toggleShuffle()" id="shuffleBtn" title="Shuffle">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+                <button class="control-btn" onclick="toggleShuffle()" id="shuffleBtn" title="Sequential play order">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/></svg>
                 </button>
-                <button class="control-btn" onclick="playPrevious()" title="Previous">
+                <button class="control-btn" onclick="playPrevious()" title="Previous track">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                 </button>
-                <button class="control-btn play-btn" onclick="togglePlay()" id="playPauseBtn" title="Play/Pause">
+                <button class="control-btn play-btn" onclick="togglePlay()" id="playPauseBtn" title="Play or pause current track">
                     <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
                 </button>
-                <button class="control-btn" onclick="playNext()" title="Next">
+                <button class="control-btn" onclick="playNext()" title="Next track">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
                 </button>
-                <button class="control-btn" onclick="toggleRepeat()" id="repeatBtn" title="Repeat">
+                <button class="control-btn" onclick="toggleRepeat()" id="repeatBtn" title="Repeat: All" style="color: var(--accent)">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
                 </button>
             </div>
 
             <div class="audio-controls-row">
-                <div class="volume-container">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
-                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="80" oninput="setVolume(this.value)">
+                <div class="volume-container" title="Volume controls">
+                    <svg id="volumeIcon" class="volume-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" onclick="toggleMute()" title="Mute/Unmute"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="80" oninput="setVolume(this.value)" title="Volume level">
                 </div>
 
-                <div class="crossfade-container" title="Crossfade: overlap songs during transitions">
+                <div class="crossfade-container" title="Crossfade settings: overlap songs during transitions">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16 4l4 4-4 4V9h-4c-1.3 0-2.4.84-2.82 2H8.04c.46-2.28 2.48-4 4.96-4h3V4zm-5 8c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm-6 4l-4-4 4-4v3h4c1.3 0 2.4-.84 2.82-2h1.14c-.46 2.28-2.48 4-4.96 4H5v3z"/></svg>
                     <input type="range" class="crossfade-slider" id="crossfadeSlider" min="0" max="10" value="10" step="0.5" oninput="setCrossfade(this.value)" title="Crossfade duration">
                     <span class="crossfade-value" id="crossfadeValue">10s</span>
@@ -1734,7 +1937,32 @@
                     </select>
                 </div>
 
-            </div>
+                <div class="lyrics-container" id="lyricsContainer">
+                    <button class="lyrics-toggle" id="lyricsToggle" onclick="toggleLyrics()" title="No lyrics available" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                        <span>Lyrics</span>
+                    </button>
+                </div>
+            </div><!-- end audio-controls-row -->
+                </div><!-- end player-content -->
+
+                <!-- Lyrics Panel -->
+                <div class="lyrics-panel" id="lyricsPanel">
+                    <div class="lyrics-panel-inner">
+                        <div class="lyrics-panel-header">
+                            <span class="lyrics-panel-title">Lyrics</span>
+                            <label class="lyrics-auto-scroll" title="Auto-scroll lyrics with playback">
+                                <input type="checkbox" id="lyricsAutoScroll" checked onchange="toggleAutoScroll(this.checked)">
+                                <span>Auto-scroll</span>
+                            </label>
+                            <button class="lyrics-panel-close" onclick="toggleLyrics()" title="Close lyrics">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                            </button>
+                        </div>
+                        <div class="lyrics-content auto-scroll" id="lyricsContent">No lyrics available</div>
+                    </div>
+                </div>
+            </div><!-- end main-content-inner -->
         </main>
 
         <!-- Bottom Bar -->
@@ -1896,6 +2124,7 @@
                     coverUrl: data.coverUrl,
                     style: data.style || '',
                     description: data.description || '',
+                    lyrics: data.lyrics || '',
                     timestamp: Date.now()
                 };
                 localStorage.setItem(SONG_CACHE_KEY, JSON.stringify(cache));
@@ -2146,6 +2375,7 @@
                         coverUrl: cached?.coverUrl || null,
                         style: cached?.style || '',
                         description: cached?.description || '',
+                        lyrics: cached?.lyrics || '',
                         duration: 0,
                         metadataLoaded: hasCachedData,
                         fetchFailed: false
@@ -2254,12 +2484,12 @@
 
         // Fetch real artist names and metadata via Puppeteer in background (streaming)
         function fetchArtistsInBackground() {
-            // Find songs that need artist, style, or description
+            // Find songs that need artist, style, description, or lyrics
             const songsNeedingData = playlist
                 .map((song, index) => ({ uuid: song.uuid, index }))
                 .filter((_, i) => {
                     const song = playlist[i];
-                    return song.artist === 'Suno AI' || !song.style || !song.description;
+                    return song.artist === 'Suno AI' || !song.artist || !song.style || !song.description || !song.lyrics;
                 });
 
             if (songsNeedingData.length === 0) {
@@ -2302,7 +2532,7 @@
                         return;
                     }
 
-                    const { uuid, artist, style, description } = data;
+                    const { uuid, artist, style, description, lyrics } = data;
                     const index = uuidToIndex[uuid];
 
                     // Verify the playlist hasn't changed and the song at this index matches
@@ -2315,13 +2545,17 @@
                             updated = true;
                         }
 
-                        // Update style and description if available
+                        // Update style, description, and lyrics if available
                         if (style && !playlist[index].style) {
                             playlist[index].style = style;
                             updated = true;
                         }
                         if (description && !playlist[index].description) {
                             playlist[index].description = description;
+                            updated = true;
+                        }
+                        if (lyrics && !playlist[index].lyrics) {
+                            playlist[index].lyrics = lyrics;
                             updated = true;
                         }
 
@@ -2581,6 +2815,9 @@
             document.getElementById('miniArtist').textContent = song.artist;
             document.title = `${song.title} - Suno Playlist Player`;
 
+            // Update lyrics panel
+            updateLyricsPanel(song.lyrics);
+
             // Update cover art if available and changed
             if (song.coverUrl) {
                 const artEl = document.getElementById('nowPlayingArt');
@@ -2620,7 +2857,7 @@
                         img.onload = resolve;
                         img.onerror = reject;
                         img.src = url;
-                        setTimeout(reject, 3000);
+                        setTimeout(reject, 3003);
                     });
                     song.coverUrl = url;
                     break;
@@ -2770,6 +3007,9 @@
             document.getElementById('songStyle').textContent = song.style || '';
             document.getElementById('songDescription').textContent = song.description || '';
 
+            // Update lyrics panel
+            updateLyricsPanel(song.lyrics);
+
             // Cover art
             const artEl = document.getElementById('nowPlayingArt');
             const bgEl = document.getElementById('mainContentBg');
@@ -2814,19 +3054,33 @@
         }
 
         // Update progress bar
+        let lastLyricsScrollTime = 0;
+
         function updateProgress() {
             const progress = (currentAudio.currentTime / currentAudio.duration) * 100 || 0;
             document.getElementById('progressFill').style.width = `${progress}%`;
             document.getElementById('currentTime').textContent = formatTime(currentAudio.currentTime);
 
+            // Update lyrics scroll every 2 seconds
+            const now = Date.now();
+            if (now - lastLyricsScrollTime > 2000) {
+                lastLyricsScrollTime = now;
+                updateLyricsScroll();
+            }
+
             // Check if we should start crossfade
             if (crossfadeDuration > 0 && !isCrossfading && currentAudio.duration) {
                 const timeRemaining = currentAudio.duration - currentAudio.currentTime;
                 if (timeRemaining <= crossfadeDuration && timeRemaining > 0) {
-                    // Determine next song
-                    const nextIndex = getNextSongIndex();
-                    if (nextIndex !== -1 && repeatMode !== 2) {
-                        startCrossfade(nextIndex);
+                    if (repeatMode === 2) {
+                        // Repeat one with crossfade - crossfade to the same song
+                        startCrossfade(currentIndex);
+                    } else {
+                        // Determine next song
+                        const nextIndex = getNextSongIndex();
+                        if (nextIndex !== -1) {
+                            startCrossfade(nextIndex);
+                        }
                     }
                 }
             }
@@ -2881,9 +3135,14 @@
             if (isCrossfading) return;
 
             if (repeatMode === 2) {
-                // Repeat one
-                currentAudio.currentTime = 0;
-                currentAudio.play();
+                // Repeat one - if crossfade is enabled, start crossfade to same song
+                // Otherwise just restart the current song
+                if (crossfadeDuration > 0) {
+                    startCrossfade(currentIndex);
+                } else {
+                    currentAudio.currentTime = 0;
+                    currentAudio.play();
+                }
             } else {
                 const nextIndex = getNextSongIndex();
                 if (nextIndex !== -1) {
@@ -2956,10 +3215,75 @@
         }
 
         // Set volume
+        let isMuted = false;
+        let volumeBeforeMute = 0.8;
+
         function setVolume(value) {
             masterVolume = value / 100;
             if (!isCrossfading) {
                 currentAudio.volume = masterVolume;
+            }
+            // Update icon based on volume level
+            if (masterVolume === 0) {
+                updateVolumeIcon(true);
+            } else {
+                isMuted = false;
+                updateVolumeIcon(false);
+            }
+        }
+
+        function toggleMute() {
+            const volumeSlider = document.getElementById('volumeSlider');
+
+            if (!isMuted) {
+                // Mute: store current volume and set to 0
+                // Only store if volume is > 0, otherwise keep the previous value
+                if (masterVolume > 0) {
+                    volumeBeforeMute = masterVolume;
+                }
+                isMuted = true;
+                masterVolume = 0;
+                currentAudio.volume = 0;
+                volumeSlider.value = 0;
+                updateVolumeIcon(true);
+            } else {
+                // Unmute: fade back to previous volume
+                isMuted = false;
+                updateVolumeIcon(false);
+                fadeToVolume(volumeBeforeMute, 300);
+                volumeSlider.value = volumeBeforeMute * 100;
+            }
+        }
+
+        function fadeToVolume(targetVolume, durationMs) {
+            const steps = 30;
+            const intervalMs = durationMs / steps;
+            const startVolume = currentAudio.volume;
+            const volumeStep = (targetVolume - startVolume) / steps;
+            let step = 0;
+
+            const fadeInterval = setInterval(() => {
+                step++;
+                const newVolume = startVolume + (volumeStep * step);
+                currentAudio.volume = Math.max(0, Math.min(1, newVolume));
+                masterVolume = currentAudio.volume;
+
+                if (step >= steps) {
+                    clearInterval(fadeInterval);
+                    currentAudio.volume = targetVolume;
+                    masterVolume = targetVolume;
+                }
+            }, intervalMs);
+        }
+
+        function updateVolumeIcon(muted) {
+            const icon = document.getElementById('volumeIcon');
+            if (muted) {
+                // Muted icon (speaker with X)
+                icon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+            } else {
+                // Normal speaker icon
+                icon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/>';
             }
         }
 
@@ -3019,7 +3343,8 @@
 
             // Set transition style class and duration
             const mainContent = document.getElementById('mainContent');
-            mainContent.className = `main-content transition-${currentTransitionStyle}`;
+            const hadLyricsVisible = mainContent.classList.contains('lyrics-visible');
+            mainContent.className = `main-content transition-${currentTransitionStyle}${hadLyricsVisible ? ' lyrics-visible' : ''}`;
 
             // Set transition duration on elements (with easing)
             const transitionDuration = `${crossfadeDuration}s`;
@@ -3124,6 +3449,9 @@
             document.getElementById('nowPlayingArtist').textContent = song.artist;
             document.getElementById('songStyle').textContent = song.style || '';
             document.getElementById('songDescription').textContent = song.description || '';
+
+            // Update lyrics panel
+            updateLyricsPanel(song.lyrics);
 
             const currentInfoEl = document.getElementById('nowPlayingInfoCurrent');
             const nextInfoEl = document.getElementById('nowPlayingInfoNext');
@@ -3236,17 +3564,130 @@
         // Toggle shuffle
         function toggleShuffle() {
             // Don't toggle if still loading
-            if (document.getElementById('shuffleBtn').classList.contains('disabled')) return;
+            const btn = document.getElementById('shuffleBtn');
+            if (btn.classList.contains('disabled')) return;
 
             isShuffle = !isShuffle;
-            document.getElementById('shuffleBtn').style.color = isShuffle ? 'var(--accent)' : 'var(--text-primary)';
+            btn.style.color = isShuffle ? 'var(--accent)' : 'var(--text-primary)';
+
             if (isShuffle) {
+                // Shuffle icon (crossed arrows)
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>';
+                btn.title = 'Shuffle: On';
                 resetShuffleOrder();
                 // Move current song to front so we continue from here
                 const currentPos = shuffledOrder.indexOf(currentIndex);
                 if (currentPos > 0) {
                     shuffledOrder.splice(currentPos, 1);
                     shuffledOrder.unshift(currentIndex);
+                }
+            } else {
+                // Sequential icon (list/menu)
+                btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/></svg>';
+                btn.title = 'Sequential play order';
+            }
+        }
+
+        // Lyrics panel state
+        let lyricsVisible = false;
+
+        function toggleLyrics() {
+            const btn = document.getElementById('lyricsToggle');
+
+            // Don't toggle if button is disabled
+            if (btn.disabled) return;
+
+            lyricsVisible = !lyricsVisible;
+            const mainContent = document.getElementById('mainContent');
+            const panelInner = document.querySelector('.lyrics-panel-inner');
+
+            if (lyricsVisible) {
+                mainContent.classList.add('lyrics-visible');
+                btn.classList.add('active');
+            } else {
+                // First fade out the content
+                panelInner.style.opacity = '0';
+                // Then collapse the panel after the fade
+                setTimeout(() => {
+                    mainContent.classList.remove('lyrics-visible');
+                    btn.classList.remove('active');
+                    // Reset inline style so CSS takes over
+                    panelInner.style.opacity = '';
+                }, 300);
+            }
+        }
+
+        // Auto-scroll lyrics based on song progress
+        let lyricsAutoScrollEnabled = true;
+
+        function toggleAutoScroll(enabled) {
+            lyricsAutoScrollEnabled = enabled;
+            const content = document.getElementById('lyricsContent');
+
+            if (enabled) {
+                content.classList.add('auto-scroll');
+            } else {
+                content.classList.remove('auto-scroll');
+            }
+        }
+
+        function updateLyricsScroll() {
+            if (!lyricsVisible || !lyricsAutoScrollEnabled) return;
+
+            const content = document.getElementById('lyricsContent');
+            if (!content || !currentAudio.duration) return;
+
+            // Stay at top for first 15%, scroll during 15-85%, stay at bottom after 85%
+            const scrollStartPoint = 0.15;
+            const scrollEndPoint = 0.85;
+            const rawProgress = currentAudio.currentTime / currentAudio.duration;
+
+            let progress;
+            if (rawProgress < scrollStartPoint) {
+                progress = 0; // Stay at top
+            } else if (rawProgress > scrollEndPoint) {
+                progress = 1; // Stay at bottom
+            } else {
+                // Scale the middle portion (15-85%) to 0-100% scroll
+                progress = (rawProgress - scrollStartPoint) / (scrollEndPoint - scrollStartPoint);
+            }
+
+            const scrollHeight = content.scrollHeight - content.clientHeight;
+
+            if (scrollHeight > 0) {
+                content.scrollTo({
+                    top: progress * scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        function updateLyricsPanel(lyrics) {
+            const content = document.getElementById('lyricsContent');
+            const container = document.getElementById('lyricsContainer');
+            const mainContent = document.getElementById('mainContent');
+            const btn = document.getElementById('lyricsToggle');
+
+            // Always show the container
+            container.style.display = 'flex';
+
+            if (lyrics && lyrics.trim()) {
+                content.textContent = lyrics;
+                content.classList.remove('no-lyrics');
+                btn.disabled = false;
+                btn.title = 'Show/hide lyrics';
+                // Reset scroll position to top for new lyrics
+                content.scrollTop = 0;
+            } else {
+                content.textContent = 'No lyrics available for this song';
+                content.classList.add('no-lyrics');
+                btn.disabled = true;
+                btn.title = 'No lyrics available';
+                // Close panel if open and no lyrics
+                if (lyricsVisible) {
+                    lyricsVisible = false;
+                    mainContent.classList.remove('lyrics-visible');
+                    btn.classList.remove('active');
                 }
             }
         }
@@ -3797,6 +4238,7 @@
                         coverUrl: songData.coverUrl,
                         style: songData.style || '',
                         description: songData.description || '',
+                        lyrics: songData.lyrics || '',
                         addedAt: songData.timestamp || Date.now()
                     };
                 }
