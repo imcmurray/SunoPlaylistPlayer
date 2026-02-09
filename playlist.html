@@ -2047,6 +2047,7 @@
         let nextAudio = audioB;    // For crossfade
         let audio = audioA;        // Alias for compatibility
         let masterVolume = 0.8;
+        let audioListenersInitialized = false;
 
         // Recent playlists storage
         const RECENT_PLAYLISTS_KEY = 'sunoRecentPlaylists';
@@ -2933,23 +2934,27 @@
             // Initialize shuffle order
             resetShuffleOrder();
 
-            // Audio events for both audio elements
-            [audioA, audioB].forEach(a => {
-                a.addEventListener('loadedmetadata', updateDuration);
-                a.addEventListener('ended', handleSongEnd);
-            });
+            // Audio events - only add once to avoid duplicate listeners on playlist switch
+            if (!audioListenersInitialized) {
+                audioListenersInitialized = true;
 
-            // Only current audio triggers these
-            audioA.addEventListener('timeupdate', updateProgress);
-            audioA.addEventListener('play', () => updatePlayState(true));
-            audioA.addEventListener('pause', () => { if (!isCrossfading) updatePlayState(false); });
+                [audioA, audioB].forEach(a => {
+                    a.addEventListener('loadedmetadata', updateDuration);
+                    a.addEventListener('ended', handleSongEnd);
+                });
 
-            audioB.addEventListener('timeupdate', updateProgress);
-            audioB.addEventListener('play', () => updatePlayState(true));
-            audioB.addEventListener('pause', () => { if (!isCrossfading) updatePlayState(false); });
+                audioA.addEventListener('timeupdate', updateProgress);
+                audioA.addEventListener('play', () => updatePlayState(true));
+                audioA.addEventListener('pause', () => { if (!isCrossfading) updatePlayState(false); });
 
-            // Set initial volume
-            masterVolume = 0.8;
+                audioB.addEventListener('timeupdate', updateProgress);
+                audioB.addEventListener('play', () => updatePlayState(true));
+                audioB.addEventListener('pause', () => { if (!isCrossfading) updatePlayState(false); });
+            }
+
+            // Preserve volume from slider (don't reset when switching playlists)
+            const sliderValue = parseFloat(document.getElementById('volumeSlider').value);
+            masterVolume = sliderValue / 100;
             audioA.volume = masterVolume;
             audioB.volume = masterVolume;
 
@@ -2975,8 +2980,10 @@
             currentIndex = index;
             const song = playlist[index];
 
-            // Reset duration display until new song loads
+            // Reset time and progress display until new song loads
             document.getElementById('totalTime').textContent = '0:00';
+            document.getElementById('currentTime').textContent = '0:00';
+            document.getElementById('progressFill').style.width = '0%';
 
             // Update audio
             currentAudio.src = song.audioUrl;
